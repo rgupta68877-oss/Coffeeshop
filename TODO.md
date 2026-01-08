@@ -1,0 +1,3 @@
+- [ ] Add firebase_auth and cloud_firestore to pubspec.yaml
+- [ ] Run flutter pub get
+- [ ] Update login_screen.dart to implement authentication and database saving
