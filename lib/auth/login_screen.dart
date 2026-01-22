@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isLoading = false;
 
+<<<<<<< HEAD
   Future<void> _forgotPassword() async {
     if (_emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -41,6 +42,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+=======
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
   Future<void> _login() async {
     setState(() {
       _isLoading = true;
@@ -52,18 +55,22 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
+<<<<<<< HEAD
       // Get user role from Firestore
       DocumentSnapshot userDoc = await _firestore
           .collection('users')
           .doc(userCredential.user!.uid)
           .get();
 
+=======
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
       // Save user data to Firestore
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'email': userCredential.user!.email,
         'lastLogin': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
+<<<<<<< HEAD
       // Navigate based on role
       if (mounted) {
         String role = userDoc.exists
@@ -74,6 +81,11 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           Navigator.pushReplacementNamed(context, '/menu');
         }
+=======
+      // Navigate to menu on success
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/menu');
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -85,6 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
         message = 'Login failed: ${e.message}';
       }
       if (mounted) {
+<<<<<<< HEAD
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
@@ -94,6 +107,17 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('An error occurred: $e')));
+=======
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An error occurred: $e')),
+        );
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
       }
     } finally {
       if (mounted) {
@@ -115,6 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
+<<<<<<< HEAD
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -180,6 +205,38 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
+=======
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/logo.png',
+              height: 120,
+            ),
+            const SizedBox(height: 40),
+            _inputField("Email", controller: _emailController),
+            const SizedBox(height: 16),
+            _inputField("Password", controller: _passwordController, obscure: true),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFC47A45),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: _isLoading ? null : _login,
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "Login",
+                        style: TextStyle(fontSize: 18),
+                      ),
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
               ),
             ),
           ),
@@ -188,11 +245,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _inputField(
     String hint, {
     TextEditingController? controller,
     bool obscure = false,
   }) {
+=======
+  Widget _inputField(String hint, {TextEditingController? controller, bool obscure = false}) {
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
     return TextField(
       controller: controller,
       obscureText: obscure,

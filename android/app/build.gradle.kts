@@ -23,11 +23,17 @@ android {
     }
 
     defaultConfig {
+<<<<<<< HEAD
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
+=======
+    minSdkVersion 21
+}
+
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
 
 
     buildTypes {

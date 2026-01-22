@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+<<<<<<< HEAD
 import 'package:provider/provider.dart';
+=======
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'auth/login_screen.dart';
@@ -18,7 +21,13 @@ import 'customer/account_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+<<<<<<< HEAD
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+=======
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
   runApp(const CoffeeShopApp());
 }
 

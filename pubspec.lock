@@ -248,6 +248,7 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+<<<<<<< HEAD
   provider:
     dependency: "direct main"
     description:
@@ -256,6 +257,8 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.5+1"
+=======
+>>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
   sky_engine:
     dependency: transitive
     description: flutter
