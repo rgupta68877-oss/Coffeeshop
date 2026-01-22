@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import '../customer/order_success.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../providers/cart_provider.dart';
+import '../models/order_model.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -10,6 +14,103 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   String? selectedPayment;
+  bool _isPlacingOrder = false;
+
+  Future<void> _placeOrder() async {
+    if (selectedPayment == null) return;
+
+    setState(() {
+      _isPlacingOrder = true;
+    });
+
+    try {
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Get user data
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data()!;
+      final shopId = userData['shopId'];
+
+      // Get shop data
+      final shopDoc = await FirebaseFirestore.instance
+          .collection('shops')
+          .doc(shopId)
+          .get();
+
+      if (!shopDoc.exists) return;
+
+      final shopData = shopDoc.data()!;
+
+      // Create order items
+      final orderItems = cartProvider.items
+          .map(
+            (item) => OrderItem(
+              itemId: item.coffee.itemId,
+              name: item.coffee.name,
+              price: double.parse(item.coffee.price),
+              qty: item.qty,
+            ),
+          )
+          .toList();
+
+      // Create order
+      final orderId = FirebaseFirestore.instance.collection('orders').doc().id;
+      final order = OrderModel(
+        orderId: orderId,
+        shopId: shopId,
+        shopName: shopData['name'] ?? 'Unknown Shop',
+        customerId: user.uid,
+        customerName: userData['name'] ?? 'Unknown Customer',
+        customerPhone: userData['phone'] ?? '',
+        items: orderItems,
+        totalAmount: cartProvider.totalAmount,
+        status: 'new',
+        statusHistory: [
+          StatusHistory(status: 'new', time: DateTime.now().toString()),
+        ],
+        createdAt: DateTime.now().toString(),
+      );
+
+      // Save to Firestore
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).set({
+        ...order.toJson(),
+        'paymentMethod': selectedPayment,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Clear cart
+      cartProvider.clearCart();
+
+      // Navigate to order success
+      if (mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/order-success',
+          arguments: orderId,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to place order: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPlacingOrder = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,23 +158,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: selectedPayment == null
+                onPressed: selectedPayment == null || _isPlacingOrder
                     ? null
-                    : () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => OrderSuccess(),
-                          ),
-                        );
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.brown,
-                ),
-                child: const Text(
-                  "Place Order",
-                  style: TextStyle(fontSize: 18),
-                ),
+                    : _placeOrder,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.brown),
+                child: _isPlacingOrder
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Place Order", style: TextStyle(fontSize: 18)),
               ),
             ),
           ],

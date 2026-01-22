@@ -4,12 +4,16 @@ class CoffeeDetail extends StatelessWidget {
   final String name;
   final String price;
   final String imagePath;
+  final String shopId;
+  final String shopName;
 
   const CoffeeDetail({
     super.key,
     required this.name,
     required this.price,
     required this.imagePath,
+    required this.shopId,
+    required this.shopName,
   });
 
   @override
@@ -42,9 +46,27 @@ class CoffeeDetail extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-                    Text("\$$price", style: const TextStyle(fontSize: 24, color: Colors.brown, fontWeight: FontWeight.w600)),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      "\$$price",
+                      style: const TextStyle(
+                        fontSize: 24,
+                        color: Colors.brown,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  "From: $shopName",
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 10),
                 const Text(
@@ -64,12 +86,17 @@ class CoffeeDetail extends StatelessWidget {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.brown,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
                     ),
                     onPressed: () {
                       // Yahan cart ka logic aayega
                     },
-                    child: const Text("Add to Cart", style: TextStyle(fontSize: 18, color: Colors.white)),
+                    child: const Text(
+                      "Add to Cart",
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
                   ),
                 ),
               ],
