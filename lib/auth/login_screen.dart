@@ -52,23 +52,43 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // Get user role from Firestore
-      DocumentSnapshot userDoc = await _firestore
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .get();
+      final String uid = userCredential.user!.uid;
+      String role = 'Customer';
 
-      // Save user data to Firestore
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'email': userCredential.user!.email,
-        'lastLogin': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      try {
+        final userRef = _firestore.collection('users').doc(uid);
+
+        // Ensure user profile exists for existing and legacy accounts.
+        await userRef.set({
+          'uid': uid,
+          'email': userCredential.user!.email,
+          'role': 'Customer',
+          'isActive': true,
+          'lastLogin': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        final userDoc = await userRef.get();
+        if (userDoc.exists) {
+          final roleFromDoc = userDoc.data()?['role'];
+          if (roleFromDoc is String && roleFromDoc.isNotEmpty) {
+            role = roleFromDoc;
+          }
+        }
+      } on FirebaseException catch (e) {
+        if (e.code != 'permission-denied') rethrow;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Logged in, but Firestore access is blocked by security rules.',
+              ),
+            ),
+          );
+        }
+      }
 
       // Navigate based on role
       if (mounted) {
-        String role = userDoc.exists
-            ? (userDoc['role'] ?? 'Customer')
-            : 'Customer';
         if (role == 'Owner') {
           Navigator.pushReplacementNamed(context, '/manage-shop');
         } else {

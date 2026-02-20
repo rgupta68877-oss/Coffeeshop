@@ -44,6 +44,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
       // Save user data to Firestore with role
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'uid': userCredential.user!.uid,
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'email': userCredential.user!.email,
