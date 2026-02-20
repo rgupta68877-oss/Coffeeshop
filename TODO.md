@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 36e272d (Updated project files 2)
 # TODO List for Account Screens Implementation
 
 - [x] Update lib/customer/account_screen.dart to add navigation button to coffee menu
@@ -6,8 +9,11 @@
 - [ ] Update lib/main.dart to add route for owner account screen if not present
 - [x] Test navigation between screens
 - [x] Verify existing features remain intact
+<<<<<<< HEAD
 =======
 - [ ] Add firebase_auth and cloud_firestore to pubspec.yaml
 - [ ] Run flutter pub get
 - [ ] Update login_screen.dart to implement authentication and database saving
 >>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
+=======
+>>>>>>> 36e272d (Updated project files 2)
