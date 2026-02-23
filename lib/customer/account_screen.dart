@@ -264,19 +264,19 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
     final total = orderData['totalAmount'] ?? 0.0;
     final shopName = orderData['shopName'] ?? 'Unknown Shop';
     final paymentMethod = orderData['paymentMethod'] ?? 'Unknown';
-    final paymentStatus = orderData['paymentStatus'] ??
+    final paymentStatus =
+        orderData['paymentStatus'] ??
         (paymentMethod == 'Cash on Delivery' ? 'pending' : 'unknown');
 
     String itemsSummary = items.isNotEmpty
         ? items
-            .map((item) {
-              final notes =
-                  (item['notes'] ?? '').toString().trim().isEmpty
-                      ? ''
-                      : ' (${item['notes']})';
-              return '${item['name']} x${item['qty']}$notes';
-            })
-            .join(', ')
+              .map((item) {
+                final notes = (item['notes'] ?? '').toString().trim().isEmpty
+                    ? ''
+                    : ' (${item['notes']})';
+                return '${item['name']} x${item['qty']}$notes';
+              })
+              .join(', ')
         : 'No items';
 
     Color statusColor;
@@ -371,8 +371,8 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
     final color = normalized == 'paid'
         ? Colors.green
         : normalized == 'pending'
-            ? Colors.orange
-            : Colors.grey;
+        ? Colors.orange
+        : Colors.grey;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(

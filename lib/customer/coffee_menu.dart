@@ -99,21 +99,18 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
   }
 
   List<String> _categoryOptions(List<Coffee> coffees) {
-    final hasOther =
-        coffees.any((coffee) => coffee.category == MenuCategory.other);
-    return [
-      'All',
-      ...menuCategories,
-      if (hasOther) MenuCategory.other,
-    ];
+    final hasOther = coffees.any(
+      (coffee) => coffee.category == MenuCategory.other,
+    );
+    return ['All', ...menuCategories, if (hasOther) MenuCategory.other];
   }
 
   List<Coffee> _filterByCategory(List<Coffee> coffees) {
     final categoryFiltered = _selectedCategory == 'All'
         ? coffees
         : coffees
-            .where((coffee) => coffee.category == _selectedCategory)
-            .toList();
+              .where((coffee) => coffee.category == _selectedCategory)
+              .toList();
     if (_searchQuery.trim().isEmpty) {
       return _applyFilters(categoryFiltered);
     }
@@ -136,8 +133,9 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
       filtered = filtered.where((coffee) => coffee.isDairyFree).toList();
     }
     if (_filterCaffeineBoost) {
-      filtered =
-          filtered.where((coffee) => coffee.nutrition.caffeineMg >= 120).toList();
+      filtered = filtered
+          .where((coffee) => coffee.nutrition.caffeineMg >= 120)
+          .toList();
     }
     if (_filterSnacks) {
       filtered = filtered.where((coffee) => coffee.isSnack).toList();
@@ -156,9 +154,7 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
     return CustomScrollView(
       key: PageStorageKey('menu_scroll_$shopId'),
       slivers: [
-        SliverToBoxAdapter(
-          child: _buildShopSelector(),
-        ),
+        SliverToBoxAdapter(child: _buildShopSelector()),
         SliverPersistentHeader(
           pinned: true,
           delegate: _MenuHeaderDelegate(
@@ -181,35 +177,33 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final coffee = filtered[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CoffeeDetail(
-                            coffee: coffee,
-                            shopId: shopId,
-                            shopName: shopName,
-                            snackOptions: snackOptions(),
-                          ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final coffee = filtered[index];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CoffeeDetail(
+                          coffee: coffee,
+                          shopId: shopId,
+                          shopName: shopName,
+                          snackOptions: snackOptions(),
                         ),
-                      );
-                    },
-                    child: CoffeeCard(
-                      name: coffee.name,
-                      price: coffee.price,
-                      imagePath: coffee.image,
-                      badgeText:
-                          coffee.badges.isNotEmpty ? coffee.badges.first : null,
-                      onAddToCart: () => _addToCart(coffee),
-                    ),
-                  );
-                },
-                childCount: filtered.length,
-              ),
+                      ),
+                    );
+                  },
+                  child: CoffeeCard(
+                    name: coffee.name,
+                    price: coffee.price,
+                    imagePath: coffee.image,
+                    badgeText: coffee.badges.isNotEmpty
+                        ? coffee.badges.first
+                        : null,
+                    onAddToCart: () => _addToCart(coffee),
+                  ),
+                );
+              }, childCount: filtered.length),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 childAspectRatio: 0.72,
@@ -281,10 +275,7 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
                     ),
                     child: Text(
                       '${cart.totalQty}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -338,8 +329,9 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
                     shopName: _selectedShopName ?? 'Coffee Shop',
                   );
                 }
-                final coffees =
-                    menuItems.map((item) => _coffeeFromFirestore(item)).toList();
+                final coffees = menuItems
+                    .map((item) => _coffeeFromFirestore(item))
+                    .toList();
                 return _buildMenuContent(
                   coffees: coffees,
                   shopId: _selectedShopId!,
@@ -377,9 +369,246 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
                     return const Text('Error loading shops');
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final shops = snapshot.data!.docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return {
+                      'id': doc.id,
+                      'name': data['name'] ?? 'Unknown Shop',
+                      'address': data['address'] ?? '',
+                    };
+                  }).toList();
+
+                  return DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    initialValue: _selectedShopId,
+                    hint: const Text('Choose a shop'),
+                    items: shops.map((shop) {
+                      return DropdownMenuItem<String>(
+                        value: shop['id'],
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              shop['name'],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if ((shop['address'] ?? '').isNotEmpty)
+                              Text(
+                                shop['address'],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: AppColors.ink.withOpacityValue(0.6),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) async {
+                      setState(() {
+                        _selectedShopId = value;
+                        _selectedShopName = shops.firstWhere(
+                          (shop) => shop['id'] == value,
+                          orElse: () => {'name': 'Unknown'},
+                        )['name'];
+                        _selectedCategory = 'All';
+                        _searchQuery = '';
+                        _searchController.clear();
+                        _filterUnder150 = false;
+                        _filterDairyFree = false;
+                        _filterCaffeineBoost = false;
+                        _filterSnacks = false;
+                      });
+
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user != null && value != null) {
+                        await _firestore
+                            .collection('users')
+                            .doc(user.uid)
+                            .update({
+                              'shopId': value,
+                              'shopName': _selectedShopName,
+                            });
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.storefront_outlined),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuHeader(List<String> categories) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacityValue(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              setState(() => _searchQuery = value);
+            },
+            decoration: InputDecoration(
+              hintText: 'Search menu items',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = '';
+                        });
+                      },
+                    ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 36,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: categories.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                final isSelected = _selectedCategory == category;
+                return ChoiceChip(
+                  label: Text(category),
+                  selected: isSelected,
+                  onSelected: (_) {
+                    setState(() => _selectedCategory = category);
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildFilterChips(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChips() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        FilterChip(
+          label: const Text('Under ₹150'),
+          selected: _filterUnder150,
+          onSelected: (value) => setState(() => _filterUnder150 = value),
+        ),
+        FilterChip(
+          label: const Text('Dairy-Free'),
+          selected: _filterDairyFree,
+          onSelected: (value) => setState(() => _filterDairyFree = value),
+        ),
+        FilterChip(
+          label: const Text('Caffeine Boost'),
+          selected: _filterCaffeineBoost,
+          onSelected: (value) => setState(() => _filterCaffeineBoost = value),
+        ),
+        FilterChip(
+          label: const Text('Snacks'),
+          selected: _filterSnacks,
+          onSelected: (value) => setState(() => _filterSnacks = value),
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+}
+
+class _MenuHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minHeight;
+  final double maxHeight;
+  final Widget child;
+
+  _MenuHeaderDelegate({
+    required this.minHeight,
+    required this.maxHeight,
+    required this.child,
+  });
+
+  @override
+  double get minExtent => minHeight;
+
+  @override
+  double get maxExtent => maxHeight;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant _MenuHeaderDelegate oldDelegate) {
+    return oldDelegate.minHeight != minHeight ||
+        oldDelegate.maxHeight != maxHeight ||
+        oldDelegate.child != child;
+  }
+
+  Widget _buildShopSelector() {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select Shop',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              StreamBuilder<QuerySnapshot>(
+                stream: _firestore
+                    .collection('shops')
+                    .where('status', isEqualTo: 'online')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Text('Error loading shops');
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
                   }
                   final shops = snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;

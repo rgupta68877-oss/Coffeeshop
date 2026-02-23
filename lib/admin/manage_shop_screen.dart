@@ -221,7 +221,11 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.espresso, AppColors.cocoa, AppColors.caramel],
+                colors: [
+                  AppColors.espresso,
+                  AppColors.cocoa,
+                  AppColors.caramel,
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -273,9 +277,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                           children: [
                             Text(
                               _shopName ?? 'Shop Name',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
+                              style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
@@ -283,9 +285,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                             ),
                             Text(
                               'Status: ${_isOnline ? 'Online' : 'Offline'}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
+                              style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(color: Colors.white70),
                             ),
                           ],
@@ -478,7 +478,8 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final items = orderData['items'] ?? [];
     final total = orderData['totalAmount'] ?? orderData['total'] ?? 0.0;
     final paymentMethod = orderData['paymentMethod'] ?? 'Unknown';
-    final paymentStatus = orderData['paymentStatus'] ??
+    final paymentStatus =
+        orderData['paymentStatus'] ??
         (paymentMethod == 'Cash on Delivery' ? 'pending' : 'unknown');
     final customerName = orderData['customerName'] ?? 'Unknown';
     final customerPhone = orderData['customerPhone'] ?? 'Unknown';
@@ -486,14 +487,13 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
 
     String itemsSummary = items.isNotEmpty
         ? items
-            .map((item) {
-              final notes =
-                  (item['notes'] ?? '').toString().trim().isEmpty
-                      ? ''
-                      : ' (${item['notes']})';
-              return '${item['name']} x${item['qty']}$notes';
-            })
-            .join(', ')
+              .map((item) {
+                final notes = (item['notes'] ?? '').toString().trim().isEmpty
+                    ? ''
+                    : ' (${item['notes']})';
+                return '${item['name']} x${item['qty']}$notes';
+              })
+              .join(', ')
         : 'No items';
 
     return Card(
@@ -512,9 +512,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
             Text('Time: $time'),
             Text('Items: $itemsSummary'),
             if (deliveryAddress is Map<String, dynamic>)
-              Text(
-                'Delivery: ${_formatAddress(deliveryAddress)}',
-              ),
+              Text('Delivery: ${_formatAddress(deliveryAddress)}'),
             Text('Payment: $paymentMethod'),
             const SizedBox(height: 6),
             Row(
@@ -626,9 +624,12 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final line2 = address['line2'] ?? '';
     final city = address['city'] ?? '';
     final pincode = address['pincode'] ?? '';
-    final parts = [line1, line2, city, pincode]
-        .where((part) => part.toString().trim().isNotEmpty)
-        .toList();
+    final parts = [
+      line1,
+      line2,
+      city,
+      pincode,
+    ].where((part) => part.toString().trim().isNotEmpty).toList();
     return parts.join(', ');
   }
 
@@ -637,8 +638,8 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final color = normalized == 'paid'
         ? AppColors.matcha
         : normalized == 'pending'
-            ? AppColors.caramel
-            : AppColors.espresso;
+        ? AppColors.caramel
+        : AppColors.espresso;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -691,15 +692,15 @@ class _StatsCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.ink.withOpacityValue(0.6),
-                  ),
+                color: AppColors.ink.withOpacityValue(0.6),
+              ),
             ),
           ],
         ),

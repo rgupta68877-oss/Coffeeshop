@@ -63,7 +63,9 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
             );
           }
 
-          if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
+          if (snapshot.hasError ||
+              !snapshot.hasData ||
+              !snapshot.data!.exists) {
             return _buildCachedOrder(
               database,
               message:
@@ -77,11 +79,10 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
     );
   }
 
-  Map<String, dynamic> _normalizeOrderPayload(
-    Map<String, dynamic> orderData,
-  ) {
+  Map<String, dynamic> _normalizeOrderPayload(Map<String, dynamic> orderData) {
     final paymentMethod = orderData['paymentMethod'] ?? 'Unknown';
-    final paymentStatus = orderData['paymentStatus'] ??
+    final paymentStatus =
+        orderData['paymentStatus'] ??
         (paymentMethod == 'Cash on Delivery' ? 'pending' : 'unknown');
     final order = OrderModel.fromJson(orderData);
     return {
@@ -108,11 +109,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
           return Center(child: Text(message ?? 'Order not found'));
         }
 
-        return _buildOrderContent(
-          cached,
-          banner: message,
-          isCached: true,
-        );
+        return _buildOrderContent(cached, banner: message, isCached: true);
       },
     );
   }
@@ -125,7 +122,8 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
     final textTheme = Theme.of(context).textTheme;
     final order = OrderModel.fromJson(orderData);
     final paymentMethod = orderData['paymentMethod'] ?? 'Unknown';
-    final paymentStatus = orderData['paymentStatus'] ??
+    final paymentStatus =
+        orderData['paymentStatus'] ??
         (paymentMethod == 'Cash on Delivery' ? 'pending' : 'unknown');
 
     if (!isCached && _lastStatus != order.status) {
@@ -136,9 +134,9 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
           if (!mounted) return;
           final message =
               'Order status updated to ${_getStatusText(order.status)}';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
           NotificationService.showLocalNotification(
             title: 'Order Update',
             body: message,
@@ -210,9 +208,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
           const SizedBox(height: 16),
           Text(
             'Order Items',
-            style: textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           ...order.items.map(
@@ -236,9 +232,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
           const SizedBox(height: 16),
           Text(
             'Order Status',
-            style: textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
           _buildStatusTimeline(order.status),
@@ -293,12 +287,11 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                 child: Text(
                   _getStatusText(status),
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight:
-                            isCurrent ? FontWeight.w700 : FontWeight.w500,
-                        color: isCompleted
-                            ? AppColors.ink
-                            : AppColors.ink.withOpacityValue(0.5),
-                      ),
+                    fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                    color: isCompleted
+                        ? AppColors.ink
+                        : AppColors.ink.withOpacityValue(0.5),
+                  ),
                 ),
               ),
             ],
@@ -330,8 +323,8 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
     final color = normalized == 'paid'
         ? AppColors.matcha
         : normalized == 'pending'
-            ? AppColors.caramel
-            : AppColors.espresso;
+        ? AppColors.caramel
+        : AppColors.espresso;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(

@@ -8,20 +8,12 @@ class CartItem {
   final String notes;
   final int qty;
 
-  const CartItem({
-    required this.coffee,
-    this.notes = '',
-    this.qty = 1,
-  });
+  const CartItem({required this.coffee, this.notes = '', this.qty = 1});
 
   double get total => double.parse(coffee.price) * qty;
 
   CartItem copyWith({int? qty}) {
-    return CartItem(
-      coffee: coffee,
-      notes: notes,
-      qty: qty ?? this.qty,
-    );
+    return CartItem(coffee: coffee, notes: notes, qty: qty ?? this.qty);
   }
 }
 
@@ -35,8 +27,7 @@ class CartState {
 
   int get totalQty => items.fold(0, (sum, item) => sum + item.qty);
 
-  double get totalAmount =>
-      items.fold(0.0, (sum, item) => sum + item.total);
+  double get totalAmount => items.fold(0.0, (sum, item) => sum + item.total);
 }
 
 class CartNotifier extends StateNotifier<CartState> {
@@ -53,18 +44,19 @@ class CartNotifier extends StateNotifier<CartState> {
       state = CartState(items: updated);
       return;
     }
-    state = CartState(items: [
-      ...state.items,
-      CartItem(coffee: coffee, notes: notes),
-    ]);
+    state = CartState(
+      items: [
+        ...state.items,
+        CartItem(coffee: coffee, notes: notes),
+      ],
+    );
   }
 
   void removeItem(String itemId, {String notes = ''}) {
     state = CartState(
       items: state.items
           .where(
-            (item) =>
-                !(item.coffee.itemId == itemId && item.notes == notes),
+            (item) => !(item.coffee.itemId == itemId && item.notes == notes),
           )
           .toList(),
     );
@@ -89,5 +81,6 @@ class CartNotifier extends StateNotifier<CartState> {
   }
 }
 
-final cartProvider =
-    StateNotifierProvider<CartNotifier, CartState>((ref) => CartNotifier());
+final cartProvider = StateNotifierProvider<CartNotifier, CartState>(
+  (ref) => CartNotifier(),
+);

@@ -73,8 +73,9 @@ class _SignupScreenState extends State<SignupScreen> {
         message = 'Signup failed: ${e.message}';
       }
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (e) {
       if (mounted) {
@@ -149,10 +150,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         padding: const EdgeInsets.all(22),
                         child: Column(
                           children: [
-                            Image.asset(
-                              'assets/Icon.png',
-                              height: 60,
-                            ),
+                            Image.asset('assets/Icon.png', height: 60),
                             const SizedBox(height: 20),
                             _inputField(
                               'Name',
@@ -263,8 +261,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color:
-                      _isCustomerSelected ? AppColors.surface : Colors.transparent,
+                  color: _isCustomerSelected
+                      ? AppColors.surface
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Center(
@@ -292,8 +291,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color:
-                      !_isCustomerSelected ? AppColors.surface : Colors.transparent,
+                  color: !_isCustomerSelected
+                      ? AppColors.surface
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Center(
@@ -340,13 +340,7 @@ class _GlowCircle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color,
-        boxShadow: [
-          BoxShadow(
-            color: color,
-            blurRadius: 60,
-            spreadRadius: 12,
-          ),
-        ],
+        boxShadow: [BoxShadow(color: color, blurRadius: 60, spreadRadius: 12)],
       ),
     );
   }

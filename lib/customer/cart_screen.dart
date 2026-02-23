@@ -35,10 +35,7 @@ class CartScreen extends ConsumerWidget {
       ),
       body: cart.items.isEmpty
           ? Center(
-              child: Text(
-                'Your cart is empty',
-                style: textTheme.titleMedium,
-              ),
+              child: Text('Your cart is empty', style: textTheme.titleMedium),
             )
           : Column(
               children: [
@@ -74,8 +71,9 @@ class CartScreen extends ConsumerWidget {
                                     Text(
                                       '${'\u{20B9}'}${item.coffee.price}',
                                       style: textTheme.bodyMedium?.copyWith(
-                                        color:
-                                            AppColors.ink.withOpacityValue(0.7),
+                                        color: AppColors.ink.withOpacityValue(
+                                          0.7,
+                                        ),
                                       ),
                                     ),
                                     if (item.notes.isNotEmpty) ...[
@@ -86,12 +84,10 @@ class CartScreen extends ConsumerWidget {
                                         children: item.notes
                                             .split(' • ')
                                             .where(
-                                              (part) =>
-                                                  part.trim().isNotEmpty,
+                                              (part) => part.trim().isNotEmpty,
                                             )
                                             .map(
-                                              (part) =>
-                                                  _NoteChip(label: part),
+                                              (part) => _NoteChip(label: part),
                                             )
                                             .toList(),
                                       ),
@@ -221,10 +217,7 @@ class CartScreen extends ConsumerWidget {
       width: 70,
       height: 70,
       color: AppColors.oat,
-      child: const Icon(
-        Icons.local_cafe,
-        color: AppColors.espresso,
-      ),
+      child: const Icon(Icons.local_cafe, color: AppColors.espresso),
     );
   }
 }
@@ -255,25 +248,19 @@ class _QtyStepper extends StatelessWidget {
             icon: const Icon(Icons.remove, size: 16),
             onPressed: onDecrease,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(
-              minWidth: 28,
-              minHeight: 28,
-            ),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           ),
           Text(
             '$qty',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           IconButton(
             icon: const Icon(Icons.add, size: 16),
             onPressed: onIncrease,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(
-              minWidth: 28,
-              minHeight: 28,
-            ),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           ),
         ],
       ),
@@ -297,8 +284,8 @@ class _NoteChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.ink.withOpacityValue(0.7),
-            ),
+          color: AppColors.ink.withOpacityValue(0.7),
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
+import '../core/app_colors.dart';
 
 class CoffeeCard extends StatelessWidget {
   final String name;
@@ -24,9 +25,30 @@ class CoffeeCard extends StatelessWidget {
     this.isAvailable = true,
     this.showOwnerControls = false,
   });
+  final String? badgeText;
+  final VoidCallback? onAddToCart;
+  final VoidCallback? onEditPrice;
+  final VoidCallback? onToggleAvailability;
+  final bool isAvailable;
+  final bool showOwnerControls;
+
+  const CoffeeCard({
+    super.key,
+    required this.name,
+    required this.price,
+    required this.imagePath,
+    this.badgeText,
+    this.onAddToCart,
+    this.onEditPrice,
+    this.onToggleAvailability,
+    this.isAvailable = true,
+    this.showOwnerControls = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     final textTheme = Theme.of(context).textTheme;
 
     return Card(
@@ -122,8 +144,9 @@ class CoffeeCard extends StatelessWidget {
                         child: Text(
                           isAvailable ? 'Available' : 'Unavailable',
                           style: textTheme.labelMedium?.copyWith(
-                            color:
-                                isAvailable ? AppColors.matcha : AppColors.caramel,
+                            color: isAvailable
+                                ? AppColors.matcha
+                                : AppColors.caramel,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -185,11 +208,7 @@ class CoffeeCard extends StatelessWidget {
     return Container(
       color: AppColors.oat,
       child: const Center(
-        child: Icon(
-          Icons.local_cafe,
-          size: 42,
-          color: AppColors.espresso,
-        ),
+        child: Icon(Icons.local_cafe, size: 42, color: AppColors.espresso),
       ),
     );
   }
