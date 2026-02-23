@@ -58,7 +58,7 @@ class _EditPriceDialogState extends State<_EditPriceDialog> {
         ),
         ElevatedButton(
           onPressed: () async {
-            double? newPrice = double.tryParse(_priceController.text);
+            final newPrice = double.tryParse(_priceController.text);
             if (newPrice != null && newPrice > 0) {
               await FirebaseFirestore.instance
                   .collection('shops')
@@ -66,7 +66,7 @@ class _EditPriceDialogState extends State<_EditPriceDialog> {
                   .collection('menu')
                   .doc(widget.itemId)
                   .update({'price': newPrice});
-              if (!mounted) return;
+              if (!context.mounted) return;
               Navigator.of(context).pop();
             }
           },
@@ -97,43 +97,40 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
   }
 
   Future<void> _loadShopData() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      DocumentSnapshot userDoc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (userDoc.exists) {
-        setState(() {
-          _shopId = userDoc['shopId'];
-        });
-        if (_shopId != null) {
-          DocumentSnapshot shopDoc = await _firestore
-              .collection('shops')
-              .doc(_shopId)
-              .get();
-          if (shopDoc.exists) {
-            setState(() {
-              _shopName = shopDoc['name'];
-              _isOnline = shopDoc['status'] == 'online';
-            });
-          }
-        }
-      }
-    }
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final userDoc =
+        await _firestore.collection('users').doc(user.uid).get();
+    if (!userDoc.exists) return;
+
+    final shopId = userDoc.data()?['shopId'] as String?;
+    if (shopId == null || shopId.isEmpty) return;
+
+    if (!mounted) return;
+    setState(() {
+      _shopId = shopId;
+    });
+
+    final shopDoc = await _firestore.collection('shops').doc(shopId).get();
+    if (!shopDoc.exists) return;
+
+    if (!mounted) return;
+    setState(() {
+      _shopName = shopDoc.data()?['name'] as String? ?? 'Shop';
+      _isOnline = shopDoc.data()?['status'] == 'online';
+    });
   }
 
   Future<void> _toggleStatus() async {
-    if (_shopId != null) {
-      String newStatus = _isOnline ? 'offline' : 'online';
-      await _firestore.collection('shops').doc(_shopId).update({
-        'status': newStatus,
-        'lastActive': FieldValue.serverTimestamp(),
-      });
-      setState(() {
-        _isOnline = !_isOnline;
-      });
-    }
+    if (_shopId == null) return;
+    final newStatus = _isOnline ? 'offline' : 'online';
+    await _firestore.collection('shops').doc(_shopId).update({
+      'status': newStatus,
+      'lastActive': FieldValue.serverTimestamp(),
+    });
+    if (!mounted) return;
+    setState(() => _isOnline = !_isOnline);
   }
 
   Future<void> _updateOrderStatus(String orderId, String newStatus) async {
@@ -146,30 +143,24 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
   }
 
   Future<void> _logout() async {
-    // Set shop status to offline before logging out
     if (_shopId != null) {
       await _firestore.collection('shops').doc(_shopId).update({
         'status': 'offline',
         'lastActive': FieldValue.serverTimestamp(),
       });
     }
-
-    // Sign out the user
     await _auth.signOut();
-
-    // Navigate back to login screen
-    if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/');
-    }
+    if (!mounted) return;
+    Navigator.of(context).pushReplacementNamed('/');
   }
 
   Future<void> _initializeMenuItems() async {
     if (_shopId == null) return;
 
     try {
-      WriteBatch batch = _firestore.batch();
-      for (var coffee in coffeeList) {
-        DocumentReference menuItemRef = _firestore
+      final batch = _firestore.batch();
+      for (final coffee in coffeeList) {
+        final menuItemRef = _firestore
             .collection('shops')
             .doc(_shopId)
             .collection('menu')
@@ -196,17 +187,15 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
       }
       await batch.commit();
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Menu items initialized successfully!')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Menu items initialized successfully!')),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to initialize menu items: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to initialize menu items: $e')),
+      );
     }
   }
 
@@ -221,11 +210,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  AppColors.espresso,
-                  AppColors.cocoa,
-                  AppColors.caramel,
-                ],
+                colors: [AppColors.espresso, AppColors.cocoa, AppColors.caramel],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -234,9 +219,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
           actions: [
             IconButton(
               icon: const Icon(Icons.account_circle),
-              onPressed: () {
-                Navigator.pushNamed(context, '/owner-account');
-              },
+              onPressed: () => Navigator.pushNamed(context, '/owner-account'),
               tooltip: 'Account',
             ),
             IconButton(
@@ -259,7 +242,6 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  // Top Section - Shop Status
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: const BoxDecoration(
@@ -277,90 +259,92 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                           children: [
                             Text(
                               _shopName ?? 'Shop Name',
-                              style: Theme.of(context).textTheme.titleLarge
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
                                   ?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
                                   ),
                             ),
+                            const SizedBox(height: 4),
                             Text(
                               'Status: ${_isOnline ? 'Online' : 'Offline'}',
-                              style: Theme.of(context).textTheme.bodyMedium
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
                                   ?.copyWith(color: Colors.white70),
                             ),
                           ],
                         ),
                         Switch(
                           value: _isOnline,
-                          onChanged: (value) => _toggleStatus(),
+                          onChanged: (_) => _toggleStatus(),
                           activeThumbColor: AppColors.matcha,
                         ),
                       ],
                     ),
                   ),
-                  if (_shopId != null)
-                    StreamBuilder<QuerySnapshot>(
-                      stream: _firestore
-                          .collection('orders')
-                          .where('shopId', isEqualTo: _shopId)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return const SizedBox.shrink();
-                        }
-                        final orders = snapshot.data!.docs;
-                        double totalEarnings = 0;
-                        int servedToday = 0;
-                        int servedTotal = 0;
-                        final now = DateTime.now();
-                        for (final order in orders) {
-                          final data = order.data() as Map<String, dynamic>;
-                          if ((data['status'] ?? '') == 'delivered') {
-                            servedTotal += 1;
-                            totalEarnings +=
-                                (data['totalAmount'] ?? data['total'] ?? 0.0)
-                                    .toDouble();
-                            final createdAt = _extractCreatedAt(data);
-                            if (createdAt != null &&
-                                createdAt.year == now.year &&
-                                createdAt.month == now.month &&
-                                createdAt.day == now.day) {
-                              servedToday += 1;
-                            }
+                  StreamBuilder<QuerySnapshot>(
+                    stream: _firestore
+                        .collection('orders')
+                        .where('shopId', isEqualTo: _shopId)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const SizedBox.shrink();
+                      }
+                      final orders = snapshot.data!.docs;
+                      double totalEarnings = 0;
+                      int servedToday = 0;
+                      int servedTotal = 0;
+                      final now = DateTime.now();
+                      for (final order in orders) {
+                        final data = order.data() as Map<String, dynamic>;
+                        if ((data['status'] ?? '') == 'delivered') {
+                          servedTotal += 1;
+                          totalEarnings +=
+                              (data['totalAmount'] ?? data['total'] ?? 0.0)
+                                  .toDouble();
+                          final createdAt = _extractCreatedAt(data);
+                          if (createdAt != null &&
+                              createdAt.year == now.year &&
+                              createdAt.month == now.month &&
+                              createdAt.day == now.day) {
+                            servedToday += 1;
                           }
                         }
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                          child: Row(
-                            children: [
-                              _StatsCard(
-                                label: 'Earnings',
-                                value:
-                                    '${'\u{20B9}'}${totalEarnings.toStringAsFixed(2)}',
-                                icon: Icons.payments_outlined,
-                              ),
-                              const SizedBox(width: 12),
-                              _StatsCard(
-                                label: 'Served Today',
-                                value: servedToday.toString(),
-                                icon: Icons.today_outlined,
-                              ),
-                              const SizedBox(width: 12),
-                              _StatsCard(
-                                label: 'Served Total',
-                                value: servedTotal.toString(),
-                                icon: Icons.local_cafe_outlined,
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  // Tab Bar View
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Row(
+                          children: [
+                            _StatsCard(
+                              label: 'Earnings',
+                              value:
+                                  '${'\u{20B9}'}${totalEarnings.toStringAsFixed(2)}',
+                              icon: Icons.payments_outlined,
+                            ),
+                            const SizedBox(width: 12),
+                            _StatsCard(
+                              label: 'Served Today',
+                              value: servedToday.toString(),
+                              icon: Icons.today_outlined,
+                            ),
+                            const SizedBox(width: 12),
+                            _StatsCard(
+                              label: 'Served Total',
+                              value: servedTotal.toString(),
+                              icon: Icons.local_cafe_outlined,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                   Expanded(
                     child: TabBarView(
                       children: [
-                        // Orders Tab
                         StreamBuilder<QuerySnapshot>(
                           stream: _firestore
                               .collection('orders')
@@ -396,7 +380,6 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                             );
                           },
                         ),
-                        // Menu Tab
                         StreamBuilder<QuerySnapshot>(
                           stream: _firestore
                               .collection('shops')
@@ -447,11 +430,11 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                               padding: const EdgeInsets.all(12),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    childAspectRatio: 0.72,
-                                    mainAxisSpacing: 12,
-                                    crossAxisSpacing: 12,
-                                  ),
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.72,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                              ),
                               itemCount: menuItems.length,
                               itemBuilder: (context, index) {
                                 final item = menuItems[index];
@@ -478,22 +461,21 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final items = orderData['items'] ?? [];
     final total = orderData['totalAmount'] ?? orderData['total'] ?? 0.0;
     final paymentMethod = orderData['paymentMethod'] ?? 'Unknown';
-    final paymentStatus =
-        orderData['paymentStatus'] ??
+    final paymentStatus = orderData['paymentStatus'] ??
         (paymentMethod == 'Cash on Delivery' ? 'pending' : 'unknown');
     final customerName = orderData['customerName'] ?? 'Unknown';
     final customerPhone = orderData['customerPhone'] ?? 'Unknown';
     final deliveryAddress = orderData['deliveryAddress'];
 
-    String itemsSummary = items.isNotEmpty
+    final itemsSummary = items.isNotEmpty
         ? items
-              .map((item) {
-                final notes = (item['notes'] ?? '').toString().trim().isEmpty
-                    ? ''
-                    : ' (${item['notes']})';
-                return '${item['name']} x${item['qty']}$notes';
-              })
-              .join(', ')
+            .map((item) {
+              final notes = (item['notes'] ?? '').toString().trim().isEmpty
+                  ? ''
+                  : ' (${item['notes']})';
+              return '${item['name']} x${item['qty']}$notes';
+            })
+            .join(', ')
         : 'No items';
 
     return Card(
@@ -511,17 +493,17 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
             Text('Phone: $customerPhone'),
             Text('Time: $time'),
             Text('Items: $itemsSummary'),
+            Text('Payment: $paymentMethod'),
+            Text('Total: ${'\u{20B9}'}${total.toStringAsFixed(2)}'),
             if (deliveryAddress is Map<String, dynamic>)
               Text('Delivery: ${_formatAddress(deliveryAddress)}'),
-            Text('Payment: $paymentMethod'),
             const SizedBox(height: 6),
             Row(
               children: [
                 const Text('Payment Status: '),
-                _StatusPill(status: paymentStatus.toString()),
+                _statusPill(status: paymentStatus.toString()),
               ],
             ),
-            Text('Total: ${'\u{20B9}'}${total.toStringAsFixed(2)}'),
             const SizedBox(height: 8),
             _buildActionButton(orderId, status),
           ],
@@ -594,17 +576,14 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final imageUrl = itemData['imageUrl'] ?? '';
     final isAvailable = itemData['isAvailable'] ?? true;
 
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: CoffeeCard(
-        name: name,
-        price: price.toStringAsFixed(2),
-        imagePath: imageUrl,
-        isAvailable: isAvailable,
-        showOwnerControls: true,
-        onEditPrice: () => _showEditPriceDialog(itemId, price),
-        onToggleAvailability: () => _toggleAvailability(itemId, !isAvailable),
-      ),
+    return CoffeeCard(
+      name: name,
+      price: price.toStringAsFixed(2),
+      imagePath: imageUrl,
+      isAvailable: isAvailable,
+      showOwnerControls: true,
+      onEditPrice: () => _showEditPriceDialog(itemId, price.toDouble()),
+      onToggleAvailability: () => _toggleAvailability(itemId, !isAvailable),
     );
   }
 
@@ -624,22 +603,19 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final line2 = address['line2'] ?? '';
     final city = address['city'] ?? '';
     final pincode = address['pincode'] ?? '';
-    final parts = [
-      line1,
-      line2,
-      city,
-      pincode,
-    ].where((part) => part.toString().trim().isNotEmpty).toList();
+    final parts = [line1, line2, city, pincode]
+        .where((part) => part.toString().trim().isNotEmpty)
+        .toList();
     return parts.join(', ');
   }
 
-  Widget _StatusPill({required String status}) {
+  Widget _statusPill({required String status}) {
     final normalized = status.toLowerCase();
     final color = normalized == 'paid'
         ? AppColors.matcha
         : normalized == 'pending'
-        ? AppColors.caramel
-        : AppColors.espresso;
+            ? AppColors.caramel
+            : AppColors.espresso;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -692,15 +668,15 @@ class _StatsCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.ink.withOpacityValue(0.6),
-              ),
+                    color: AppColors.ink.withOpacityValue(0.6),
+                  ),
             ),
           ],
         ),

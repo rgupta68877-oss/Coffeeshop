@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
-import '../core/app_colors.dart';
 
 class CoffeeCard extends StatelessWidget {
   final String name;
@@ -25,30 +24,9 @@ class CoffeeCard extends StatelessWidget {
     this.isAvailable = true,
     this.showOwnerControls = false,
   });
-  final String? badgeText;
-  final VoidCallback? onAddToCart;
-  final VoidCallback? onEditPrice;
-  final VoidCallback? onToggleAvailability;
-  final bool isAvailable;
-  final bool showOwnerControls;
-
-  const CoffeeCard({
-    super.key,
-    required this.name,
-    required this.price,
-    required this.imagePath,
-    this.badgeText,
-    this.onAddToCart,
-    this.onEditPrice,
-    this.onToggleAvailability,
-    this.isAvailable = true,
-    this.showOwnerControls = false,
-  });
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     final textTheme = Theme.of(context).textTheme;
 
     return Card(

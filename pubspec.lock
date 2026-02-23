@@ -73,11 +73,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.4.12"
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   code_assets:
     dependency: transitive
     description:
@@ -86,10 +81,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
-<<<<<<< HEAD
-=======
->>>>>>> df1b95a (New UI and Fixes)
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   collection:
     dependency: transitive
     description:
@@ -154,11 +145,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.3"
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   ffi:
     dependency: transitive
     description:
@@ -175,10 +161,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.1"
-<<<<<<< HEAD
-=======
->>>>>>> df1b95a (New UI and Fixes)
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   firebase_auth:
     dependency: "direct main"
     description:
@@ -227,11 +209,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.24.1"
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   firebase_messaging:
     dependency: "direct main"
     description:
@@ -256,10 +233,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.10.10"
-<<<<<<< HEAD
-=======
->>>>>>> df1b95a (New UI and Fixes)
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   flutter:
     dependency: "direct main"
     description: flutter
@@ -315,11 +288,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   glob:
     dependency: transitive
     description:
@@ -352,10 +320,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.6.0"
-<<<<<<< HEAD
-=======
->>>>>>> df1b95a (New UI and Fixes)
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   http_parser:
     dependency: transitive
     description:
@@ -428,27 +392,9 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.17.0"
-<<<<<<< HEAD
   native_toolchain_c:
     dependency: transitive
     description:
-=======
-<<<<<<< HEAD
-  nested:
-    dependency: transitive
-    description:
-      name: nested
-      sha256: "03bac4c528c64c95c722ec99280375a6f2fc708eec17c7b3f07253b626cd2a20"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.0"
-  path:
-=======
-  native_toolchain_c:
->>>>>>> df1b95a (New UI and Fixes)
-    dependency: transitive
-    description:
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
       name: native_toolchain_c
       sha256: "89e83885ba09da5fdf2cdacc8002a712ca238c28b7f717910b34bcd27b0d03ac"
       url: "https://pub.dev"
@@ -470,11 +416,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.9.1"
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   path_provider:
     dependency: "direct main"
     description:
@@ -539,10 +480,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.6"
-<<<<<<< HEAD
-=======
->>>>>>> df1b95a (New UI and Fixes)
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   plugin_platform_interface:
     dependency: transitive
     description:
@@ -551,19 +488,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-  provider:
-    dependency: "direct main"
-    description:
-      name: provider
-      sha256: "4e82183fa20e5ca25703ead7e05de9e4cceed1fbd1eadc1ac3cb6f565a09f272"
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.1.5+1"
-=======
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   pub_semver:
     dependency: transitive
     description:
@@ -580,10 +504,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.6.1"
-<<<<<<< HEAD
-=======
->>>>>>> df1b95a (New UI and Fixes)
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   sky_engine:
     dependency: transitive
     description: flutter
@@ -660,12 +580,6 @@ packages:
       sha256: "93167629bfc610f71560ab9312acdda4959de4df6fac7492c89ff0d3886f6636"
       url: "https://pub.dev"
     source: hosted
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-    version: "0.7.7"
-=======
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
     version: "0.7.9"
   timezone:
     dependency: transitive
@@ -675,10 +589,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.9.4"
-<<<<<<< HEAD
-=======
->>>>>>> df1b95a (New UI and Fixes)
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
   typed_data:
     dependency: transitive
     description:
@@ -711,7 +621,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
-<<<<<<< HEAD
   xdg_directories:
     dependency: transitive
     description:
@@ -739,38 +648,3 @@ packages:
 sdks:
   dart: ">=3.10.4 <4.0.0"
   flutter: ">=3.38.4"
-=======
-<<<<<<< HEAD
-sdks:
-  dart: ">=3.10.4 <4.0.0"
-  flutter: ">=3.22.0"
-=======
-  xdg_directories:
-    dependency: transitive
-    description:
-      name: xdg_directories
-      sha256: "7a3f37b05d989967cdddcbb571f1ea834867ae2faa29725fd085180e0883aa15"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.0"
-  xml:
-    dependency: transitive
-    description:
-      name: xml
-      sha256: "971043b3a0d3da28727e40ed3e0b5d18b742fa5a68665cca88e74b7876d5e025"
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.6.1"
-  yaml:
-    dependency: transitive
-    description:
-      name: yaml
-      sha256: b9da305ac7c39faa3f030eccd175340f968459dae4af175130b3fc47e40d76ce
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.1.3"
-sdks:
-  dart: ">=3.10.4 <4.0.0"
-  flutter: ">=3.38.4"
->>>>>>> df1b95a (New UI and Fixes)
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7

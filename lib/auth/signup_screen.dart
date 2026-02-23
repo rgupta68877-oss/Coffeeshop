@@ -22,28 +22,27 @@ class _SignupScreenState extends State<SignupScreen> {
 
   bool _isLoading = false;
   bool _isCustomerSelected = true;
+
   String get _selectedRole => _isCustomerSelected ? 'Customer' : 'Owner';
 
   Future<void> _signup() async {
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match')),
+      );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      UserCredential userCredential = await _auth
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'uid': userCredential.user!.uid,
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'email': userCredential.user!.email,
@@ -53,15 +52,14 @@ class _SignupScreenState extends State<SignupScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully!')),
-        );
-        if (_selectedRole == 'Owner') {
-          Navigator.pushReplacementNamed(context, '/link-shop');
-        } else {
-          Navigator.pushReplacementNamed(context, '/menu');
-        }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account created successfully!')),
+      );
+      if (_selectedRole == 'Owner') {
+        Navigator.pushReplacementNamed(context, '/link-shop');
+      } else {
+        Navigator.pushReplacementNamed(context, '/menu');
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -72,22 +70,18 @@ class _SignupScreenState extends State<SignupScreen> {
       } else {
         message = 'Signup failed: ${e.message}';
       }
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('An error occurred: $e')));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('An error occurred: $e')));
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -150,7 +144,10 @@ class _SignupScreenState extends State<SignupScreen> {
                         padding: const EdgeInsets.all(22),
                         child: Column(
                           children: [
-                            Image.asset('assets/Icon.png', height: 60),
+                            Image.asset(
+                              'assets/Icon.png',
+                              height: 60,
+                            ),
                             const SizedBox(height: 20),
                             _inputField(
                               'Name',
@@ -184,7 +181,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               icon: Icons.lock_outline,
                             ),
                             const SizedBox(height: 18),
-                            _roleSelector(),
+                            _roleSelector(textTheme),
                             const SizedBox(height: 20),
                             SizedBox(
                               width: double.infinity,
@@ -239,9 +236,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _roleSelector() {
-    final textTheme = Theme.of(context).textTheme;
-
+  Widget _roleSelector(TextTheme textTheme) {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
@@ -252,18 +247,13 @@ class _SignupScreenState extends State<SignupScreen> {
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _isCustomerSelected = true;
-                });
-              },
+              onTap: () => setState(() => _isCustomerSelected = true),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _isCustomerSelected
-                      ? AppColors.surface
-                      : Colors.transparent,
+                  color:
+                      _isCustomerSelected ? AppColors.surface : Colors.transparent,
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Center(
@@ -282,18 +272,13 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
           Expanded(
             child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _isCustomerSelected = false;
-                });
-              },
+              onTap: () => setState(() => _isCustomerSelected = false),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: !_isCustomerSelected
-                      ? AppColors.surface
-                      : Colors.transparent,
+                  color:
+                      !_isCustomerSelected ? AppColors.surface : Colors.transparent,
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Center(
@@ -340,7 +325,13 @@ class _GlowCircle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color,
-        boxShadow: [BoxShadow(color: color, blurRadius: 60, spreadRadius: 12)],
+        boxShadow: [
+          BoxShadow(
+            color: color,
+            blurRadius: 60,
+            spreadRadius: 12,
+          ),
+        ],
       ),
     );
   }

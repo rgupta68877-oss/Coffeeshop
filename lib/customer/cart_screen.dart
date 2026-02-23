@@ -82,7 +82,7 @@ class CartScreen extends ConsumerWidget {
                                         spacing: 6,
                                         runSpacing: 6,
                                         children: item.notes
-                                            .split(' • ')
+                                            .split(' | ')
                                             .where(
                                               (part) => part.trim().isNotEmpty,
                                             )
@@ -290,3 +290,4 @@ class _NoteChip extends StatelessWidget {
     );
   }
 }
+

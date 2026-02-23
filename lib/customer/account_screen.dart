@@ -356,7 +356,7 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
             Row(
               children: [
                 const Text('Payment Status: '),
-                _StatusPill(status: paymentStatus.toString()),
+                _statusPill(status: paymentStatus.toString()),
               ],
             ),
             Text('Total: ${'\u{20B9}'}${total.toStringAsFixed(2)}'),
@@ -366,7 +366,7 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
     );
   }
 
-  Widget _StatusPill({required String status}) {
+  Widget _statusPill({required String status}) {
     final normalized = status.toLowerCase();
     final color = normalized == 'paid'
         ? Colors.green

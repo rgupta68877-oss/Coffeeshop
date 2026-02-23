@@ -31,8 +31,6 @@ class _OrderSuccessState extends State<OrderSuccess> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(

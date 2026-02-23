@@ -5,6 +5,7 @@ import '../models/order_model.dart';
 import '../core/app_colors.dart';
 import '../core/notifications/notification_service.dart';
 import '../providers/app_database_provider.dart';
+import '../data/local/app_database.dart';
 
 class TrackOrderScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -194,7 +195,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                   Row(
                     children: [
                       const Text('Payment Status: '),
-                      _StatusPill(status: paymentStatus.toString()),
+                      _statusPill(status: paymentStatus.toString()),
                     ],
                   ),
                   Text(
@@ -318,7 +319,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
     }
   }
 
-  Widget _StatusPill({required String status}) {
+  Widget _statusPill({required String status}) {
     final normalized = status.toLowerCase();
     final color = normalized == 'paid'
         ? AppColors.matcha

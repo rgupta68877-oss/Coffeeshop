@@ -35,17 +35,15 @@ class _LinkYourShopScreenState extends State<LinkYourShopScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      User? user = _auth.currentUser;
+      final user = _auth.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
 
-      DocumentReference shopRef = _firestore.collection('shops').doc();
+      final shopRef = _firestore.collection('shops').doc();
       await shopRef.set({
         'shopId': shopRef.id,
         'name': _shopNameController.text.trim(),
@@ -62,9 +60,9 @@ class _LinkYourShopScreenState extends State<LinkYourShopScreen> {
         'lastActive': FieldValue.serverTimestamp(),
       });
 
-      WriteBatch batch = _firestore.batch();
-      for (var coffee in coffeeList) {
-        DocumentReference menuItemRef = shopRef.collection('menu').doc();
+      final batch = _firestore.batch();
+      for (final coffee in coffeeList) {
+        final menuItemRef = shopRef.collection('menu').doc();
         batch.set(menuItemRef, {
           'name': coffee.name,
           'price': int.parse(coffee.price),
@@ -91,23 +89,19 @@ class _LinkYourShopScreenState extends State<LinkYourShopScreen> {
         'shopId': shopRef.id,
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Shop linked successfully!')),
-        );
-        Navigator.pushReplacementNamed(context, '/manage-shop');
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Shop linked successfully!')),
+      );
+      Navigator.pushReplacementNamed(context, '/manage-shop');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to create shop: $e')));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to create shop: $e')));
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -239,11 +233,13 @@ class _LinkYourShopScreenState extends State<LinkYourShopScreen> {
   Widget _inputField(
     String hint, {
     TextEditingController? controller,
+    bool obscure = false,
     IconData? icon,
     TextInputType? keyboardType,
   }) {
     return TextField(
       controller: controller,
+      obscureText: obscure,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,

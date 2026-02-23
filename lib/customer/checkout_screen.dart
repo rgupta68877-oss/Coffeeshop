@@ -7,15 +7,12 @@ import '../models/order_model.dart';
 import '../core/app_colors.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
-class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
-  ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
-class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String? selectedPayment;
   bool _isPlacingOrder = false;
@@ -266,8 +263,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -648,7 +643,7 @@ class _FakePaymentSheetState extends State<_FakePaymentSheet> {
                   : () async {
                       setState(() => _isProcessing = true);
                       await Future.delayed(const Duration(seconds: 2));
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       Navigator.pop(context, true);
                     },
               child: _isProcessing
@@ -667,106 +662,5 @@ class _FakePaymentSheetState extends State<_FakePaymentSheet> {
         ],
       ),
     );
-}
   }
-}
-
-class _FakePaymentSheet extends StatefulWidget {
-  final double amount;
-
-  const _FakePaymentSheet({required this.amount});
-
-  @override
-  State<_FakePaymentSheet> createState() => _FakePaymentSheetState();
-}
-
-class _FakePaymentSheetState extends State<_FakePaymentSheet> {
-  bool _isProcessing = false;
-  String _method = 'UPI';
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Fake Payment Gateway',
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Complete a dummy payment to proceed.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: AppColors.ink.withOpacityValue(0.6),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            children: [
-              ChoiceChip(
-                label: const Text('UPI'),
-                selected: _method == 'UPI',
-                onSelected: (_) => setState(() => _method = 'UPI'),
-              ),
-              ChoiceChip(
-                label: const Text('Card'),
-                selected: _method == 'Card',
-                onSelected: (_) => setState(() => _method = 'Card'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            decoration: InputDecoration(
-              hintText: _method == 'UPI' ? 'UPI ID' : 'Card Number',
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            decoration: InputDecoration(
-              hintText: _method == 'UPI' ? 'UPI PIN' : 'Expiry (MM/YY)',
-            ),
-            obscureText: true,
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isProcessing
-                  ? null
-                  : () async {
-                      setState(() => _isProcessing = true);
-                      await Future.delayed(const Duration(seconds: 2));
-                      if (!mounted) return;
-                      Navigator.pop(context, true);
-                    },
-              child: _isProcessing
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Text('${'\u{20B9}'}${widget.amount.toStringAsFixed(2)} Pay'),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-}
 }

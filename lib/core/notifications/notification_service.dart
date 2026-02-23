@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter/foundation.dart';
 
 class NotificationService {
   NotificationService._();
@@ -53,14 +52,8 @@ class NotificationService {
 
     await initializeForBackground();
 
-    final androidPlugin =
-        _localNotifications.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    if (androidPlugin != null &&
-        !kIsWeb &&
-        defaultTargetPlatform == TargetPlatform.android) {
-      await androidPlugin.requestPermission();
-    }
+    _localNotifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
 
     await FirebaseMessaging.instance.requestPermission(
       alert: true,

@@ -16,6 +16,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -23,30 +24,12 @@ android {
     }
 
     defaultConfig {
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 36e272d (Updated project files 2)
-=======
->>>>>>> df1b95a (New UI and Fixes)
->>>>>>> 50e1f6c218ce77364ce7d0f3eb166abdb42739f7
+        applicationId = "com.example.coffeeshop"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
-=======
-    minSdkVersion 21
-}
-
->>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
-
-
-
-
 
     buildTypes {
         release {
@@ -61,4 +44,6 @@ flutter {
     source = "../.."
 }
 
-apply(plugin = "com.google.gms.google-services")
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}

@@ -44,30 +44,6 @@ class CoffeeShopApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<CartProvider>(
-      create: (context) => CartProvider(),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const SplashScreen(),
-          '/login': (context) => const LoginScreen(),
-          '/signup': (context) => const SignupScreen(),
-          '/link-shop': (context) => const LinkYourShopScreen(),
-          '/manage-shop': (context) => const ManageShopScreen(),
-          '/owner-account': (context) => const OwnerAccountScreen(),
-          '/customer-account': (context) => const CustomerAccountScreen(),
-          '/menu': (context) => const CoffeeMenu(),
-          '/cart': (context) => const CartScreen(),
-          '/checkout': (context) => const CheckoutScreen(),
-          '/order-success': (context) => OrderSuccess(
-            orderId: ModalRoute.of(context)!.settings.arguments as String,
-          ),
-          '/track-order': (context) => TrackOrderScreen(
-            orderId: ModalRoute.of(context)!.settings.arguments as String,
-          ),
-        },
-      ),
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

@@ -42,7 +42,7 @@ dependencies:
   firebase_messaging: ^15.1.0
   flutter_local_notifications: ^17.1.2
   drift: ^2.20.0
-  drift_flutter: 0.2.8
+  drift_flutter: ^0.2.8
   path_provider: ^2.1.2
   path: ^1.9.0
 
@@ -67,10 +67,6 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-  assets:
-    - assets/images/
-
-  # To add assets to your application, add an assets section, like this:
   assets:
     - assets/Menu_Items/
     - assets/Icon.png

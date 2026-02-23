@@ -2,21 +2,21 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
+import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-class AppDatabase extends DatabaseConnectionUser {
-  AppDatabase._(DatabaseConnection connection) : super(connection) {
-    _initFuture = _init();
-  }
+class AppDatabase extends GeneratedDatabase {
+  AppDatabase() : super(_openConnection());
 
-  factory AppDatabase() {
-    final connection = DatabaseConnection.fromExecutor(_openConnection());
-    return AppDatabase._(connection);
-  }
+  @override
+  int get schemaVersion => 1;
 
-  late final Future<void> _initFuture;
+  @override
+  Iterable<TableInfo<Table, Object?>> get allTables => const [];
+
+  @override
+  List<DatabaseSchemaEntity> get allSchemaEntities => const [];
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
@@ -37,7 +37,7 @@ class AppDatabase extends DatabaseConnectionUser {
   }
 
   Future<void> upsertOrder(String orderId, Map<String, dynamic> payload) async {
-    await _initFuture;
+    await _init();
     final jsonPayload = jsonEncode(payload);
     await customUpdate(
       'INSERT OR REPLACE INTO cached_orders (order_id, payload, updated_at) VALUES (?, ?, ?)',
@@ -50,7 +50,7 @@ class AppDatabase extends DatabaseConnectionUser {
   }
 
   Future<Map<String, dynamic>?> getOrder(String orderId) async {
-    await _initFuture;
+    await _init();
     final row = await customSelect(
       'SELECT payload FROM cached_orders WHERE order_id = ?',
       variables: [Variable<String>(orderId)],
@@ -62,12 +62,10 @@ class AppDatabase extends DatabaseConnectionUser {
   }
 
   Future<void> deleteOrder(String orderId) async {
-    await _initFuture;
+    await _init();
     await customUpdate(
       'DELETE FROM cached_orders WHERE order_id = ?',
       variables: [Variable<String>(orderId)],
     );
   }
-
-  Future<void> close() => connection.executor.close();
 }

@@ -28,50 +28,67 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await _auth.sendPasswordResetEmail(email: _emailController.text.trim());
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password reset email sent!')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password reset email sent!')),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
   Future<void> _login() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      DocumentSnapshot userDoc = await _firestore
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .get();
+      final uid = userCredential.user!.uid;
+      var role = 'Customer';
 
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'email': userCredential.user!.email,
-        'lastLogin': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      try {
+        final userRef = _firestore.collection('users').doc(uid);
+        await userRef.set(
+          {
+            'uid': uid,
+            'email': userCredential.user!.email,
+            'role': 'Customer',
+            'isActive': true,
+            'lastLogin': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
 
-      if (mounted) {
-        String role = userDoc.exists
-            ? (userDoc['role'] ?? 'Customer')
-            : 'Customer';
-        if (role == 'Owner') {
-          Navigator.pushReplacementNamed(context, '/manage-shop');
-        } else {
-          Navigator.pushReplacementNamed(context, '/menu');
+        final userDoc = await userRef.get();
+        if (userDoc.exists) {
+          final roleFromDoc = userDoc.data()?['role'];
+          if (roleFromDoc is String && roleFromDoc.isNotEmpty) {
+            role = roleFromDoc;
+          }
         }
+      } on FirebaseException catch (e) {
+        if (e.code != 'permission-denied') rethrow;
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Logged in, but Firestore access is blocked by security rules.',
+            ),
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      if (role == 'Owner') {
+        Navigator.pushReplacementNamed(context, '/manage-shop');
+      } else {
+        Navigator.pushReplacementNamed(context, '/menu');
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -82,22 +99,18 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         message = 'Login failed: ${e.message}';
       }
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('An error occurred: $e')));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('An error occurred: $e')));
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -161,7 +174,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset('assets/Icon.png', height: 64),
+                            Image.asset(
+                              'assets/Icon.png',
+                              height: 64,
+                            ),
                             const SizedBox(height: 24),
                             _inputField(
                               'Email',
@@ -207,8 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                     Center(
                       child: TextButton(
-                        onPressed: () =>
-                            Navigator.pushNamed(context, '/signup'),
+                        onPressed: () => Navigator.pushNamed(context, '/signup'),
                         child: const Text("Don't have an account? Sign Up"),
                       ),
                     ),
@@ -260,42 +275,14 @@ class _GlowCircle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color,
-        boxShadow: [BoxShadow(color: color, blurRadius: 60, spreadRadius: 12)],
+        boxShadow: [
+          BoxShadow(
+            color: color,
+            blurRadius: 60,
+            spreadRadius: 12,
+          ),
+        ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-}
-
-class _GlowCircle extends StatelessWidget {
-  final double size;
-  final Color color;
-
-  const _GlowCircle({required this.size, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: size,
-      width: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-        boxShadow: [BoxShadow(color: color, blurRadius: 60, spreadRadius: 12)],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 }
