@@ -20,6 +20,18 @@ class _ComplaintScreenState extends State<ComplaintScreen> {
 
   bool _isSubmitting = false;
   Map<String, dynamic>? _userData;
+  String _priority = 'medium';
+
+  int get _slaHours {
+    switch (_priority) {
+      case 'high':
+        return 8;
+      case 'low':
+        return 48;
+      default:
+        return 24;
+    }
+  }
 
   @override
   void initState() {
@@ -60,6 +72,11 @@ class _ComplaintScreenState extends State<ComplaintScreen> {
         'shopId': _userData?['shopId'],
         'subject': _subjectController.text.trim(),
         'message': _messageController.text.trim(),
+        'priority': _priority,
+        'slaHours': _slaHours,
+        'slaDeadline': Timestamp.fromDate(
+          DateTime.now().add(Duration(hours: _slaHours)),
+        ),
         'status': 'open',
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -120,9 +137,7 @@ class _ComplaintScreenState extends State<ComplaintScreen> {
             const SizedBox(height: 20),
             TextField(
               controller: _subjectController,
-              decoration: const InputDecoration(
-                labelText: 'Subject',
-              ),
+              decoration: const InputDecoration(labelText: 'Subject'),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -132,6 +147,33 @@ class _ComplaintScreenState extends State<ComplaintScreen> {
               decoration: const InputDecoration(
                 labelText: 'Describe your issue',
                 alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _priority,
+              items: const [
+                DropdownMenuItem(value: 'low', child: Text('Low priority')),
+                DropdownMenuItem(
+                  value: 'medium',
+                  child: Text('Medium priority'),
+                ),
+                DropdownMenuItem(value: 'high', child: Text('High priority')),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _priority = value);
+              },
+              decoration: const InputDecoration(
+                labelText: 'Priority',
+                prefixIcon: Icon(Icons.flag_outlined),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'SLA target: $_slaHours hours',
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.ink.withOpacityValue(0.6),
               ),
             ),
             const SizedBox(height: 20),

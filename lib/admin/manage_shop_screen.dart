@@ -100,8 +100,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    final userDoc =
-        await _firestore.collection('users').doc(user.uid).get();
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
     if (!userDoc.exists) return;
 
     final shopId = userDoc.data()?['shopId'] as String?;
@@ -138,6 +137,33 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
       'status': newStatus,
       'statusHistory': FieldValue.arrayUnion([
         {'status': newStatus, 'time': DateTime.now().toString()},
+      ]),
+    });
+  }
+
+  Future<void> _resolveCancellationRequest(
+    String orderId, {
+    required bool approve,
+    required String paymentStatus,
+  }) async {
+    if (approve) {
+      await _firestore.collection('orders').doc(orderId).update({
+        'status': 'cancelled',
+        'cancellationRequest.status': 'approved',
+        'cancellationRequest.resolvedAt': FieldValue.serverTimestamp(),
+        if (paymentStatus.toLowerCase() == 'paid') 'refundStatus': 'pending',
+        'statusHistory': FieldValue.arrayUnion([
+          {'status': 'cancelled', 'time': DateTime.now().toString()},
+        ]),
+      });
+      return;
+    }
+
+    await _firestore.collection('orders').doc(orderId).update({
+      'cancellationRequest.status': 'rejected',
+      'cancellationRequest.resolvedAt': FieldValue.serverTimestamp(),
+      'statusHistory': FieldValue.arrayUnion([
+        {'status': 'cancellation_rejected', 'time': DateTime.now().toString()},
       ]),
     });
   }
@@ -210,7 +236,11 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.espresso, AppColors.cocoa, AppColors.caramel],
+                colors: [
+                  AppColors.espresso,
+                  AppColors.cocoa,
+                  AppColors.caramel,
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -259,9 +289,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                           children: [
                             Text(
                               _shopName ?? 'Shop Name',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
+                              style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
@@ -270,9 +298,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                             const SizedBox(height: 4),
                             Text(
                               'Status: ${_isOnline ? 'Online' : 'Offline'}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
+                              style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(color: Colors.white70),
                             ),
                           ],
@@ -430,11 +456,11 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                               padding: const EdgeInsets.all(12),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                childAspectRatio: 0.72,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                              ),
+                                    crossAxisCount: 2,
+                                    childAspectRatio: 0.72,
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                  ),
                               itemCount: menuItems.length,
                               itemBuilder: (context, index) {
                                 final item = menuItems[index];
@@ -461,21 +487,30 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final items = orderData['items'] ?? [];
     final total = orderData['totalAmount'] ?? orderData['total'] ?? 0.0;
     final paymentMethod = orderData['paymentMethod'] ?? 'Unknown';
-    final paymentStatus = orderData['paymentStatus'] ??
+    final paymentStatus =
+        orderData['paymentStatus'] ??
         (paymentMethod == 'Cash on Delivery' ? 'pending' : 'unknown');
+    final refundStatus = (orderData['refundStatus'] ?? '').toString();
+    final cancellationRequest =
+        orderData['cancellationRequest'] as Map<String, dynamic>?;
+    final cancellationStatus = (cancellationRequest?['status'] ?? '')
+        .toString()
+        .toLowerCase();
     final customerName = orderData['customerName'] ?? 'Unknown';
     final customerPhone = orderData['customerPhone'] ?? 'Unknown';
     final deliveryAddress = orderData['deliveryAddress'];
+    final rating = orderData['rating'];
+    final review = (orderData['review'] ?? '').toString();
 
     final itemsSummary = items.isNotEmpty
         ? items
-            .map((item) {
-              final notes = (item['notes'] ?? '').toString().trim().isEmpty
-                  ? ''
-                  : ' (${item['notes']})';
-              return '${item['name']} x${item['qty']}$notes';
-            })
-            .join(', ')
+              .map((item) {
+                final notes = (item['notes'] ?? '').toString().trim().isEmpty
+                    ? ''
+                    : ' (${item['notes']})';
+                return '${item['name']} x${item['qty']}$notes';
+              })
+              .join(', ')
         : 'No items';
 
     return Card(
@@ -497,6 +532,8 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
             Text('Total: ${'\u{20B9}'}${total.toStringAsFixed(2)}'),
             if (deliveryAddress is Map<String, dynamic>)
               Text('Delivery: ${_formatAddress(deliveryAddress)}'),
+            if (rating is num) Text('Rating: ${rating.toStringAsFixed(1)} / 5'),
+            if (review.isNotEmpty) Text('Review: $review'),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -504,15 +541,57 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                 _statusPill(status: paymentStatus.toString()),
               ],
             ),
+            if (refundStatus.isNotEmpty)
+              Text('Refund: ${refundStatus.toUpperCase()}'),
+            if (cancellationStatus.isNotEmpty)
+              Text('Cancellation: ${cancellationStatus.toUpperCase()}'),
             const SizedBox(height: 8),
-            _buildActionButton(orderId, status),
+            _buildActionButton(orderId, status, orderData),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionButton(String orderId, String status) {
+  Widget _buildActionButton(
+    String orderId,
+    String status,
+    Map<String, dynamic> orderData,
+  ) {
+    final paymentStatus = (orderData['paymentStatus'] ?? '').toString();
+    final refundStatus = (orderData['refundStatus'] ?? '')
+        .toString()
+        .toLowerCase();
+    final cancellationRequest =
+        orderData['cancellationRequest'] as Map<String, dynamic>?;
+    final cancellationStatus = (cancellationRequest?['status'] ?? '')
+        .toString()
+        .toLowerCase();
+    if (cancellationStatus == 'pending') {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          ElevatedButton(
+            onPressed: () => _resolveCancellationRequest(
+              orderId,
+              approve: true,
+              paymentStatus: paymentStatus,
+            ),
+            child: const Text('Approve Cancel'),
+          ),
+          OutlinedButton(
+            onPressed: () => _resolveCancellationRequest(
+              orderId,
+              approve: false,
+              paymentStatus: paymentStatus,
+            ),
+            child: const Text('Reject Cancel'),
+          ),
+        ],
+      );
+    }
+
     switch (status) {
       case 'new':
         return Row(
@@ -544,6 +623,20 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
           onPressed: () => _updateOrderStatus(orderId, 'delivered'),
           child: const Text('Mark Delivered'),
         );
+      case 'cancelled':
+        if (refundStatus == 'pending') {
+          return ElevatedButton(
+            onPressed: () =>
+                _firestore.collection('orders').doc(orderId).update({
+                  'refundStatus': 'processed',
+                  'refundProcessedAt': FieldValue.serverTimestamp(),
+                }),
+            child: const Text('Mark Refund Processed'),
+          );
+        }
+        return const Text('Cancelled', style: TextStyle(color: Colors.red));
+      case 'rejected':
+        return const Text('Rejected', style: TextStyle(color: Colors.red));
       case 'delivered':
       default:
         return const Text('Delivered', style: TextStyle(color: Colors.green));
@@ -570,20 +663,134 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
         .update({'isAvailable': isAvailable});
   }
 
+  void _showOwnerCoffeeDetails(String itemId, Map<String, dynamic> itemData) {
+    final name = (itemData['name'] ?? 'Unknown Item').toString();
+    final rawPrice = itemData['price'];
+    final price = rawPrice is num
+        ? rawPrice.toDouble()
+        : double.tryParse(rawPrice.toString()) ?? 0.0;
+    final imageUrl = (itemData['imageUrl'] ?? '').toString();
+    final description = (itemData['description'] ?? 'No description')
+        .toString();
+    final isAvailable = itemData['isAvailable'] ?? true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.espresso.withOpacityValue(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              name,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${'\u{20B9}'}${price.toStringAsFixed(2)}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.espresso,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              description,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.ink.withOpacityValue(0.7),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (imageUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: imageUrl.startsWith('http')
+                    ? Image.network(
+                        imageUrl,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.asset(
+                        imageUrl,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+              ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showEditPriceDialog(itemId, price);
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit Price'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _toggleAvailability(itemId, !isAvailable);
+                    },
+                    icon: Icon(
+                      isAvailable
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility,
+                    ),
+                    label: Text(
+                      isAvailable ? 'Mark Unavailable' : 'Mark Available',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildOwnerCoffeeCard(String itemId, Map<String, dynamic> itemData) {
     final name = itemData['name'] ?? 'Unknown Item';
     final price = itemData['price'] ?? 0.0;
     final imageUrl = itemData['imageUrl'] ?? '';
     final isAvailable = itemData['isAvailable'] ?? true;
 
-    return CoffeeCard(
-      name: name,
-      price: price.toStringAsFixed(2),
-      imagePath: imageUrl,
-      isAvailable: isAvailable,
-      showOwnerControls: true,
-      onEditPrice: () => _showEditPriceDialog(itemId, price.toDouble()),
-      onToggleAvailability: () => _toggleAvailability(itemId, !isAvailable),
+    return GestureDetector(
+      onTap: () => _showOwnerCoffeeDetails(itemId, itemData),
+      child: CoffeeCard(
+        name: name,
+        price: price.toStringAsFixed(2),
+        imagePath: imageUrl,
+        isAvailable: isAvailable,
+        showOwnerControls: true,
+        onEditPrice: () => _showEditPriceDialog(itemId, price.toDouble()),
+        onToggleAvailability: () => _toggleAvailability(itemId, !isAvailable),
+      ),
     );
   }
 
@@ -603,9 +810,12 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final line2 = address['line2'] ?? '';
     final city = address['city'] ?? '';
     final pincode = address['pincode'] ?? '';
-    final parts = [line1, line2, city, pincode]
-        .where((part) => part.toString().trim().isNotEmpty)
-        .toList();
+    final parts = [
+      line1,
+      line2,
+      city,
+      pincode,
+    ].where((part) => part.toString().trim().isNotEmpty).toList();
     return parts.join(', ');
   }
 
@@ -614,8 +824,8 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     final color = normalized == 'paid'
         ? AppColors.matcha
         : normalized == 'pending'
-            ? AppColors.caramel
-            : AppColors.espresso;
+        ? AppColors.caramel
+        : AppColors.espresso;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -668,15 +878,15 @@ class _StatsCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.ink.withOpacityValue(0.6),
-                  ),
+                color: AppColors.ink.withOpacityValue(0.6),
+              ),
             ),
           ],
         ),

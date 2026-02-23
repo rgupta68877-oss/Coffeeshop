@@ -54,16 +54,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
       try {
         final userRef = _firestore.collection('users').doc(uid);
-        await userRef.set(
-          {
-            'uid': uid,
-            'email': userCredential.user!.email,
-            'role': 'Customer',
-            'isActive': true,
-            'lastLogin': FieldValue.serverTimestamp(),
-          },
-          SetOptions(merge: true),
-        );
+        await userRef.set({
+          'uid': uid,
+          'email': userCredential.user!.email,
+          'role': 'Customer',
+          'walletBalance': 0.0,
+          'loyaltyPoints': 0,
+          'favoriteItemIds': const [],
+          'isActive': true,
+          'lastLogin': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
 
         final userDoc = await userRef.get();
         if (userDoc.exists) {
@@ -100,9 +100,9 @@ class _LoginScreenState extends State<LoginScreen> {
         message = 'Login failed: ${e.message}';
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -174,10 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset(
-                              'assets/Icon.png',
-                              height: 64,
-                            ),
+                            Image.asset('assets/Icon.png', height: 64),
                             const SizedBox(height: 24),
                             _inputField(
                               'Email',
@@ -223,7 +220,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                     Center(
                       child: TextButton(
-                        onPressed: () => Navigator.pushNamed(context, '/signup'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/signup'),
                         child: const Text("Don't have an account? Sign Up"),
                       ),
                     ),
@@ -275,13 +273,7 @@ class _GlowCircle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color,
-        boxShadow: [
-          BoxShadow(
-            color: color,
-            blurRadius: 60,
-            spreadRadius: 12,
-          ),
-        ],
+        boxShadow: [BoxShadow(color: color, blurRadius: 60, spreadRadius: 12)],
       ),
     );
   }

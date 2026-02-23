@@ -26,6 +26,49 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
   bool _filterDairyFree = false;
   bool _filterCaffeineBoost = false;
   bool _filterSnacks = false;
+  final Set<String> _favoriteItemIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    if (!doc.exists) return;
+    final data = doc.data();
+    final favorites = data?['favoriteItemIds'];
+    if (favorites is List) {
+      if (!mounted) return;
+      setState(() {
+        _favoriteItemIds
+          ..clear()
+          ..addAll(favorites.map((item) => item.toString()));
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite(Coffee coffee) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final userRef = _firestore.collection('users').doc(user.uid);
+    final isFavorite = _favoriteItemIds.contains(coffee.itemId);
+    setState(() {
+      if (isFavorite) {
+        _favoriteItemIds.remove(coffee.itemId);
+      } else {
+        _favoriteItemIds.add(coffee.itemId);
+      }
+    });
+    await userRef.set({
+      'favoriteItemIds': isFavorite
+          ? FieldValue.arrayRemove([coffee.itemId])
+          : FieldValue.arrayUnion([coffee.itemId]),
+    }, SetOptions(merge: true));
+  }
 
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
@@ -40,14 +83,14 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-      SnackBar(
-        content: Text('${coffee.name} added to cart. Cart items: $totalQty'),
-        action: SnackBarAction(
-          label: 'View Cart',
-          onPressed: () => Navigator.pushNamed(context, '/cart'),
+        SnackBar(
+          content: Text('${coffee.name} added to cart. Cart items: $totalQty'),
+          action: SnackBarAction(
+            label: 'View Cart',
+            onPressed: () => Navigator.pushNamed(context, '/cart'),
+          ),
         ),
-      ),
-    );
+      );
   }
 
   Coffee _coffeeFromFirestore(DocumentSnapshot item) {
@@ -100,21 +143,18 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
   }
 
   List<String> _categoryOptions(List<Coffee> coffees) {
-    final hasOther =
-        coffees.any((coffee) => coffee.category == MenuCategory.other);
-    return [
-      'All',
-      ...menuCategories,
-      if (hasOther) MenuCategory.other,
-    ];
+    final hasOther = coffees.any(
+      (coffee) => coffee.category == MenuCategory.other,
+    );
+    return ['All', ...menuCategories, if (hasOther) MenuCategory.other];
   }
 
   List<Coffee> _filterByCategory(List<Coffee> coffees) {
     final categoryFiltered = _selectedCategory == 'All'
         ? coffees
         : coffees
-            .where((coffee) => coffee.category == _selectedCategory)
-            .toList();
+              .where((coffee) => coffee.category == _selectedCategory)
+              .toList();
     if (_searchQuery.trim().isEmpty) {
       return _applyFilters(categoryFiltered);
     }
@@ -137,8 +177,9 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
       filtered = filtered.where((coffee) => coffee.isDairyFree).toList();
     }
     if (_filterCaffeineBoost) {
-      filtered =
-          filtered.where((coffee) => coffee.nutrition.caffeineMg >= 120).toList();
+      filtered = filtered
+          .where((coffee) => coffee.nutrition.caffeineMg >= 120)
+          .toList();
     }
     if (_filterSnacks) {
       filtered = filtered.where((coffee) => coffee.isSnack).toList();
@@ -155,19 +196,22 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
     final filtered = _filterByCategory(coffees);
     final categories = _categoryOptions(coffees);
     final width = MediaQuery.sizeOf(context).width;
-    final crossAxisCount = width >= 1080 ? 4 : width >= 760 ? 3 : 2;
+    final crossAxisCount = width >= 1080
+        ? 4
+        : width >= 760
+        ? 3
+        : 2;
     final cardAspectRatio = width >= 760 ? 0.78 : 0.72;
+    final headerHeight = width < 360 ? 212.0 : 176.0;
     return CustomScrollView(
       key: PageStorageKey('menu_scroll_$shopId'),
       slivers: [
-        SliverToBoxAdapter(
-          child: _buildShopSelector(),
-        ),
+        SliverToBoxAdapter(child: _buildShopSelector()),
         SliverPersistentHeader(
           pinned: true,
           delegate: _MenuHeaderDelegate(
-            minHeight: 176,
-            maxHeight: 176,
+            minHeight: headerHeight,
+            maxHeight: headerHeight,
             child: _buildMenuHeader(categories),
           ),
         ),
@@ -185,35 +229,35 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final coffee = filtered[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CoffeeDetail(
-                            coffee: coffee,
-                            shopId: shopId,
-                            shopName: shopName,
-                            snackOptions: snackOptions(),
-                          ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final coffee = filtered[index];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CoffeeDetail(
+                          coffee: coffee,
+                          shopId: shopId,
+                          shopName: shopName,
+                          snackOptions: snackOptions(),
                         ),
-                      );
-                    },
-                    child: CoffeeCard(
-                      name: coffee.name,
-                      price: coffee.price,
-                      imagePath: coffee.image,
-                      badgeText:
-                          coffee.badges.isNotEmpty ? coffee.badges.first : null,
-                      onAddToCart: () => _addToCart(coffee),
-                    ),
-                  );
-                },
-                childCount: filtered.length,
-              ),
+                      ),
+                    );
+                  },
+                  child: CoffeeCard(
+                    name: coffee.name,
+                    price: coffee.price,
+                    imagePath: coffee.image,
+                    badgeText: coffee.badges.isNotEmpty
+                        ? coffee.badges.first
+                        : null,
+                    onAddToCart: () => _addToCart(coffee),
+                    isFavorite: _favoriteItemIds.contains(coffee.itemId),
+                    onToggleFavorite: () => _toggleFavorite(coffee),
+                  ),
+                );
+              }, childCount: filtered.length),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
                 childAspectRatio: cardAspectRatio,
@@ -283,10 +327,7 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
                     ),
                     child: Text(
                       '${cart.totalQty}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -338,8 +379,9 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
                     shopName: _selectedShopName ?? 'Coffee Shop',
                   );
                 }
-                final coffees =
-                    menuItems.map((item) => _coffeeFromFirestore(item)).toList();
+                final coffees = menuItems
+                    .map((item) => _coffeeFromFirestore(item))
+                    .toList();
                 return _buildMenuContent(
                   coffees: coffees,
                   shopId: _selectedShopId!,
@@ -377,9 +419,7 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
                     return const Text('Error loading shops');
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
+                    return const Center(child: CircularProgressIndicator());
                   }
                   final shops = snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
@@ -506,7 +546,8 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
                 return ChoiceChip(
                   label: Text(category),
                   selected: isSelected,
-                  onSelected: (_) => setState(() => _selectedCategory = category),
+                  onSelected: (_) =>
+                      setState(() => _selectedCategory = category),
                 );
               },
             ),
@@ -587,4 +628,3 @@ class _MenuHeaderDelegate extends SliverPersistentHeaderDelegate {
         oldDelegate.child != child;
   }
 }
-

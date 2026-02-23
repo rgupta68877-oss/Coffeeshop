@@ -94,6 +94,20 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
         'deliveryAddress': orderData['deliveryAddress'],
       if (orderData['paymentDetails'] != null)
         'paymentDetails': orderData['paymentDetails'],
+      if (orderData['tipAmount'] != null) 'tipAmount': orderData['tipAmount'],
+      if (orderData['discountAmount'] != null)
+        'discountAmount': orderData['discountAmount'],
+      if (orderData['walletUsed'] != null)
+        'walletUsed': orderData['walletUsed'],
+      if (orderData['couponCode'] != null)
+        'couponCode': orderData['couponCode'],
+      if (orderData['invoice'] != null) 'invoice': orderData['invoice'],
+      if (orderData['refundStatus'] != null)
+        'refundStatus': orderData['refundStatus'],
+      if (orderData['cancellationRequest'] != null)
+        'cancellationRequest': orderData['cancellationRequest'],
+      if (orderData['rating'] != null) 'rating': orderData['rating'],
+      if (orderData['review'] != null) 'review': orderData['review'],
     };
   }
 
@@ -126,6 +140,28 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
     final paymentStatus =
         orderData['paymentStatus'] ??
         (paymentMethod == 'Cash on Delivery' ? 'pending' : 'unknown');
+    final refundStatus = (orderData['refundStatus'] ?? '').toString();
+    final cancellationRequest =
+        orderData['cancellationRequest'] as Map<String, dynamic>?;
+    final cancellationStatus = (cancellationRequest?['status'] ?? '')
+        .toString()
+        .toLowerCase();
+    final couponCode = (orderData['couponCode'] ?? '').toString();
+    final discount = (orderData['discountAmount'] is num)
+        ? (orderData['discountAmount'] as num).toDouble()
+        : 0.0;
+    final tip = (orderData['tipAmount'] is num)
+        ? (orderData['tipAmount'] as num).toDouble()
+        : 0.0;
+    final walletUsed = (orderData['walletUsed'] is num)
+        ? (orderData['walletUsed'] as num).toDouble()
+        : 0.0;
+    final rating = orderData['rating'] is num
+        ? (orderData['rating'] as num).toInt()
+        : null;
+    final review = (orderData['review'] ?? '').toString();
+    final invoice = orderData['invoice'] as Map<String, dynamic>?;
+    final invoiceId = (invoice?['invoiceId'] ?? '').toString();
 
     if (!isCached && _lastStatus != order.status) {
       final previous = _lastStatus;
@@ -198,10 +234,45 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                       _statusPill(status: paymentStatus.toString()),
                     ],
                   ),
+                  if (couponCode.isNotEmpty) Text('Coupon: $couponCode'),
+                  if (discount > 0)
+                    Text(
+                      'Discount: -${'\u{20B9}'}${discount.toStringAsFixed(2)}',
+                    ),
+                  if (walletUsed > 0)
+                    Text(
+                      'Wallet Used: -${'\u{20B9}'}${walletUsed.toStringAsFixed(2)}',
+                    ),
+                  if (tip > 0)
+                    Text('Tip: ${'\u{20B9}'}${tip.toStringAsFixed(2)}'),
+                  if (refundStatus.isNotEmpty)
+                    Text('Refund: ${refundStatus.toUpperCase()}'),
+                  if (cancellationStatus.isNotEmpty)
+                    Text('Cancellation: ${cancellationStatus.toUpperCase()}'),
+                  if (invoiceId.isNotEmpty) Text('Invoice: $invoiceId'),
                   Text(
                     'Total: ${'\u{20B9}'}${order.totalAmount.toStringAsFixed(2)}',
                   ),
                   Text('Ordered at: ${order.createdAt}'),
+                  if (rating != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Text('Rating: '),
+                        ...List.generate(
+                          5,
+                          (index) => Icon(
+                            index < rating
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            size: 16,
+                            color: AppColors.caramel,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (review.isNotEmpty) Text('Review: $review'),
+                  ],
                 ],
               ),
             ),
@@ -219,7 +290,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
                 subtitle: Text(
                   item.notes.isEmpty
                       ? 'Qty: ${item.qty}'
-                      : 'Qty: ${item.qty} • ${item.notes}',
+                      : 'Qty: ${item.qty} | ${item.notes}',
                 ),
                 trailing: Text(
                   '${'\u{20B9}'}${item.price.toStringAsFixed(2)}',
@@ -243,6 +314,24 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
   }
 
   Widget _buildStatusTimeline(String currentStatus) {
+    if (currentStatus == 'cancelled' || currentStatus == 'rejected') {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacityValue(0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          currentStatus == 'cancelled'
+              ? 'Order cancelled'
+              : 'Order rejected by shop',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.red,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+    }
     final statuses = ['new', 'preparing', 'ready', 'picked', 'delivered'];
     final currentIndex = statuses.indexOf(currentStatus);
 
@@ -314,6 +403,12 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
         return 'Picked Up';
       case 'delivered':
         return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'rejected':
+        return 'Rejected';
+      case 'cancellation_requested':
+        return 'Cancellation Requested';
       default:
         return status;
     }

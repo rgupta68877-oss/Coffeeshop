@@ -7,6 +7,13 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final size = MediaQuery.sizeOf(context);
+    final compact = size.height < 700 || size.width < 360;
+    final horizontalPadding = compact ? 18.0 : 24.0;
+    final bottomPadding = compact ? 20.0 : 32.0;
+    final titleStyle = compact
+        ? textTheme.headlineMedium
+        : textTheme.displaySmall;
 
     return Scaffold(
       body: Stack(
@@ -15,6 +22,8 @@ class SplashScreen extends StatelessWidget {
           Image.asset(
             'assets/SplashScreen.png',
             fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) =>
+                Container(color: AppColors.espresso),
           ),
           Container(
             decoration: BoxDecoration(
@@ -31,7 +40,12 @@ class SplashScreen extends StatelessWidget {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                compact ? 16 : 24,
+                horizontalPadding,
+                bottomPadding,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -39,10 +53,12 @@ class SplashScreen extends StatelessWidget {
                     children: [
                       Image.asset(
                         'assets/Icon.png',
-                        height: 44,
-                        width: 44,
+                        height: compact ? 38 : 44,
+                        width: compact ? 38 : 44,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.local_cafe, color: Colors.white),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: compact ? 10 : 12),
                       Text(
                         'Coffee Shop',
                         style: textTheme.titleLarge?.copyWith(
@@ -55,19 +71,17 @@ class SplashScreen extends StatelessWidget {
                   const Spacer(),
                   Text(
                     'Brewed for your pace.',
-                    style: textTheme.displaySmall?.copyWith(
+                    style: titleStyle?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: compact ? 8 : 12),
                   Text(
                     'Pick a drink, personalize it, and let us do the rest.',
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: Colors.white70,
-                    ),
+                    style: textTheme.bodyLarge?.copyWith(color: Colors.white70),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: compact ? 16 : 24),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(

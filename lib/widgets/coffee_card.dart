@@ -7,10 +7,12 @@ class CoffeeCard extends StatelessWidget {
   final String imagePath;
   final String? badgeText;
   final VoidCallback? onAddToCart;
+  final VoidCallback? onToggleFavorite;
   final VoidCallback? onEditPrice;
   final VoidCallback? onToggleAvailability;
   final bool isAvailable;
   final bool showOwnerControls;
+  final bool isFavorite;
 
   const CoffeeCard({
     super.key,
@@ -19,10 +21,12 @@ class CoffeeCard extends StatelessWidget {
     required this.imagePath,
     this.badgeText,
     this.onAddToCart,
+    this.onToggleFavorite,
     this.onEditPrice,
     this.onToggleAvailability,
     this.isAvailable = true,
     this.showOwnerControls = false,
+    this.isFavorite = false,
   });
 
   @override
@@ -57,6 +61,26 @@ class CoffeeCard extends StatelessWidget {
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                         ),
+                      ),
+                    ),
+                  ),
+                if (!showOwnerControls)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: IconButton(
+                      onPressed: onToggleFavorite,
+                      tooltip: isFavorite ? 'Remove favorite' : 'Add favorite',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacityValue(0.9),
+                        foregroundColor: isFavorite
+                            ? AppColors.caramel
+                            : AppColors.espresso,
+                      ),
+                      icon: Icon(
+                        isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
                       ),
                     ),
                   ),

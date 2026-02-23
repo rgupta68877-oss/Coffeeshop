@@ -18,23 +18,30 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _isPlacingOrder = false;
   String? _paymentReference;
   bool _isLoadingProfile = true;
+  bool _isLoadingOffers = false;
 
-  final TextEditingController _addressLine1Controller =
-      TextEditingController();
-  final TextEditingController _addressLine2Controller =
-      TextEditingController();
+  final TextEditingController _addressLine1Controller = TextEditingController();
+  final TextEditingController _addressLine2Controller = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
-  final TextEditingController _deliveryNoteController =
-      TextEditingController();
+  final TextEditingController _deliveryNoteController = TextEditingController();
 
   final TextEditingController _cardNameController = TextEditingController();
   final TextEditingController _cardNumberController = TextEditingController();
   final TextEditingController _cardExpiryController = TextEditingController();
   final TextEditingController _cardCvvController = TextEditingController();
+  final TextEditingController _couponController = TextEditingController();
 
   bool _saveAddress = true;
   bool _saveCard = false;
+  bool _useWallet = false;
+  bool _redeemLoyalty = false;
+  double _walletBalance = 0.0;
+  int _loyaltyPoints = 0;
+  double _tipAmount = 0.0;
+  String? _appliedCouponCode;
+  double _discountAmount = 0.0;
+  List<Map<String, dynamic>> _availableOffers = [];
 
   @override
   void initState() {
@@ -48,8 +55,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       setState(() => _isLoadingProfile = false);
       return;
     }
-    final doc =
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
     if (doc.exists) {
       final data = doc.data()!;
       final address = data['deliveryAddress'];
@@ -67,10 +76,109 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ? '**** **** **** ${payment['cardLast4']}'
             : '';
       }
+      _walletBalance = (data['walletBalance'] is num)
+          ? (data['walletBalance'] as num).toDouble()
+          : 0.0;
+      _loyaltyPoints = (data['loyaltyPoints'] is num)
+          ? (data['loyaltyPoints'] as num).toInt()
+          : 0;
+      final shopId = (data['shopId'] ?? '').toString();
+      if (shopId.isNotEmpty) {
+        await _loadOffers(shopId);
+      }
     }
     if (mounted) {
       setState(() => _isLoadingProfile = false);
     }
+  }
+
+  Future<void> _loadOffers(String shopId) async {
+    setState(() => _isLoadingOffers = true);
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('offers')
+          .where('isActive', isEqualTo: true)
+          .get();
+      final offers = snapshot.docs.map((doc) => doc.data()).where((data) {
+        final targetShop = (data['shopId'] ?? 'global').toString();
+        return targetShop == 'global' || targetShop == shopId;
+      }).toList();
+      if (!mounted) return;
+      setState(() {
+        _availableOffers = offers;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingOffers = false);
+      }
+    }
+  }
+
+  double _loyaltyRedeemAmount(double subtotal) {
+    if (!_redeemLoyalty) return 0.0;
+    final maxRedeem = subtotal - _discountAmount;
+    if (maxRedeem <= 0) return 0.0;
+    return _loyaltyPoints.toDouble().clamp(0, maxRedeem).toDouble();
+  }
+
+  double _walletUsedAmount(double subtotal) {
+    if (!_useWallet) return 0.0;
+    final afterDiscountAndLoyalty =
+        subtotal -
+        _discountAmount -
+        _loyaltyRedeemAmount(subtotal) +
+        _tipAmount;
+    if (afterDiscountAndLoyalty <= 0) return 0.0;
+    return _walletBalance.clamp(0, afterDiscountAndLoyalty).toDouble();
+  }
+
+  double _payableAmount(double subtotal) {
+    final amount =
+        subtotal +
+        _tipAmount -
+        _discountAmount -
+        _loyaltyRedeemAmount(subtotal) -
+        _walletUsedAmount(subtotal);
+    return amount < 0 ? 0 : amount;
+  }
+
+  void _applyCoupon(double subtotal) {
+    final code = _couponController.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      setState(() {
+        _appliedCouponCode = null;
+        _discountAmount = 0.0;
+      });
+      return;
+    }
+    final offer = _availableOffers.firstWhere(
+      (item) => (item['code'] ?? '').toString().toUpperCase() == code,
+      orElse: () => {},
+    );
+    if (offer.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invalid coupon code')));
+      return;
+    }
+    final minOrder = (offer['minOrder'] is num)
+        ? (offer['minOrder'] as num).toDouble()
+        : 0.0;
+    if (subtotal < minOrder) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Minimum order for this coupon is ₹$minOrder')),
+      );
+      return;
+    }
+    final type = (offer['type'] ?? 'flat').toString();
+    final value = (offer['value'] is num)
+        ? (offer['value'] as num).toDouble()
+        : 0.0;
+    final discount = type == 'percent' ? (subtotal * value / 100) : value;
+    setState(() {
+      _appliedCouponCode = code;
+      _discountAmount = discount.clamp(0, subtotal).toDouble();
+    });
   }
 
   Future<void> _placeOrder() async {
@@ -91,13 +199,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     try {
       final cartState = ref.read(cartProvider);
       final cartNotifier = ref.read(cartProvider.notifier);
+      final subtotal = cartState.totalAmount;
+      final loyaltyRedeemed = _loyaltyRedeemAmount(subtotal);
+      final walletUsed = _walletUsedAmount(subtotal);
+      final payableAmount = _payableAmount(subtotal);
+      final loyaltyEarned = (payableAmount / 10).floor();
       if (selectedPayment == 'Cash on Delivery') {
         _paymentReference = null;
       }
       if (selectedPayment == 'UPI / Card Payment') {
-        final paid = await _showFakePaymentGateway(
-          amount: cartState.totalAmount,
-        );
+        final paid = await _showFakePaymentGateway(amount: payableAmount);
         if (!paid) {
           if (mounted) {
             setState(() {
@@ -149,28 +260,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         'note': _deliveryNoteController.text.trim(),
       };
 
-      final cleanedCardNumber =
-          _cardNumberController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final cleanedCardNumber = _cardNumberController.text.replaceAll(
+        RegExp(r'[^0-9]'),
+        '',
+      );
       final cardLast4 = cleanedCardNumber.length >= 4
           ? cleanedCardNumber.substring(cleanedCardNumber.length - 4)
           : cleanedCardNumber;
 
       if (_saveAddress) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({'deliveryAddress': deliveryAddress}, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'deliveryAddress': deliveryAddress,
+        }, SetOptions(merge: true));
       }
       if (_saveCard && cardLast4.isNotEmpty) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({
-              'paymentProfile': {
-                'cardHolder': _cardNameController.text.trim(),
-                'cardLast4': cardLast4,
-              },
-            }, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'paymentProfile': {
+            'cardHolder': _cardNameController.text.trim(),
+            'cardLast4': cardLast4,
+          },
+        }, SetOptions(merge: true));
       }
 
       final orderId = FirebaseFirestore.instance.collection('orders').doc().id;
@@ -182,13 +291,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         customerName: userData['name'] ?? 'Unknown Customer',
         customerPhone: userData['phone'] ?? '',
         items: orderItems,
-        totalAmount: cartState.totalAmount,
+        totalAmount: payableAmount,
         status: 'new',
         statusHistory: [
           StatusHistory(status: 'new', time: DateTime.now().toString()),
         ],
         createdAt: DateTime.now().toString(),
       );
+
+      final invoiceId = 'INV-${DateTime.now().millisecondsSinceEpoch}';
+      final invoice = {
+        'invoiceId': invoiceId,
+        'generatedAt': DateTime.now().toIso8601String(),
+        'items': orderItems.map((item) => item.toJson()).toList(),
+        'subtotal': subtotal,
+        'discount': _discountAmount,
+        'tip': _tipAmount,
+        'walletUsed': walletUsed,
+        'loyaltyRedeemed': loyaltyRedeemed,
+        'total': payableAmount,
+      };
 
       await FirebaseFirestore.instance.collection('orders').doc(orderId).set({
         ...order.toJson(),
@@ -200,11 +322,31 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 'cardLast4': cardLast4,
               },
         'paymentMethod': selectedPayment,
-        'paymentStatus':
-            selectedPayment == 'Cash on Delivery' ? 'pending' : 'paid',
+        'paymentStatus': selectedPayment == 'Cash on Delivery'
+            ? 'pending'
+            : 'paid',
         'paymentReference': _paymentReference,
+        'couponCode': _appliedCouponCode,
+        'discountAmount': _discountAmount,
+        'tipAmount': _tipAmount,
+        'walletUsed': walletUsed,
+        'loyaltyRedeemed': loyaltyRedeemed,
+        'loyaltyEarned': loyaltyEarned,
+        'invoice': invoice,
+        'refundStatus': 'none',
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      final newWallet = (_walletBalance - walletUsed).clamp(0, double.infinity);
+      final newPoints =
+          (_loyaltyPoints - loyaltyRedeemed.toInt() + loyaltyEarned).clamp(
+            0,
+            1000000,
+          );
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'walletBalance': newWallet,
+        'loyaltyPoints': newPoints,
+      }, SetOptions(merge: true));
 
       cartNotifier.clearCart();
 
@@ -258,12 +400,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _cardNumberController.dispose();
     _cardExpiryController.dispose();
     _cardCvvController.dispose();
+    _couponController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final cartState = ref.watch(cartProvider);
+    final subtotal = cartState.totalAmount;
+    final loyaltyRedeemed = _loyaltyRedeemAmount(subtotal);
+    final walletUsed = _walletUsedAmount(subtotal);
+    final payable = _payableAmount(subtotal);
 
     return Scaffold(
       appBar: AppBar(
@@ -326,8 +474,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         child: TextField(
                           controller: _pincodeController,
                           keyboardType: TextInputType.number,
-                          decoration:
-                              const InputDecoration(labelText: 'Pincode'),
+                          decoration: const InputDecoration(
+                            labelText: 'Pincode',
+                          ),
                         ),
                       ),
                     ],
@@ -421,8 +570,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             controller: _cardCvvController,
                             keyboardType: TextInputType.number,
                             obscureText: true,
-                            decoration:
-                                const InputDecoration(labelText: 'CVV'),
+                            decoration: const InputDecoration(labelText: 'CVV'),
                           ),
                         ),
                       ],
@@ -438,6 +586,123 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       activeThumbColor: AppColors.matcha,
                     ),
                   ],
+                  const SizedBox(height: 14),
+                  Text(
+                    'Offers & Savings',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  if (_isLoadingOffers)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: LinearProgressIndicator(),
+                    )
+                  else if (_availableOffers.isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _availableOffers.map((offer) {
+                        final code = (offer['code'] ?? '').toString();
+                        final label = (offer['label'] ?? code).toString();
+                        return ActionChip(
+                          label: Text(label),
+                          onPressed: () {
+                            setState(() {
+                              _couponController.text = code;
+                            });
+                            _applyCoupon(subtotal);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _couponController,
+                          textCapitalization: TextCapitalization.characters,
+                          decoration: const InputDecoration(
+                            labelText: 'Coupon code',
+                            prefixIcon: Icon(Icons.sell_outlined),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: () => _applyCoupon(subtotal),
+                        child: const Text('Apply'),
+                      ),
+                    ],
+                  ),
+                  if (_appliedCouponCode != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Applied: $_appliedCouponCode (-${'\u{20B9}'}${_discountAmount.toStringAsFixed(2)})',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.matcha,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Use wallet balance (${'\u{20B9}'}${_walletBalance.toStringAsFixed(2)})',
+                    ),
+                    value: _useWallet,
+                    onChanged: (value) => setState(() => _useWallet = value),
+                    activeThumbColor: AppColors.matcha,
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Redeem loyalty points ($_loyaltyPoints pts)'),
+                    value: _redeemLoyalty,
+                    onChanged: (value) =>
+                        setState(() => _redeemLoyalty = value),
+                    activeThumbColor: AppColors.matcha,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Add a Tip',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [0.0, 10.0, 20.0, 30.0].map((tip) {
+                      final selected = _tipAmount == tip;
+                      return ChoiceChip(
+                        label: Text(
+                          tip == 0 ? 'No Tip' : '${'\u{20B9}'}${tip.toInt()}',
+                        ),
+                        selected: selected,
+                        onSelected: (_) => setState(() => _tipAmount = tip),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          _summaryRow('Subtotal', subtotal),
+                          _summaryRow('Discount', -_discountAmount),
+                          _summaryRow('Loyalty', -loyaltyRedeemed),
+                          _summaryRow('Wallet', -walletUsed),
+                          _summaryRow('Tip', _tipAmount),
+                          const Divider(),
+                          _summaryRow('Payable', payable, isBold: true),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -473,12 +738,39 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     )
                   : Text(
                       selectedPayment == 'UPI / Card Payment'
-                          ? 'Pay & Place Order'
+                          ? 'Pay ${'\u{20B9}'}${payable.toStringAsFixed(2)} & Place Order'
                           : 'Place Order',
                     ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, double value, {bool isBold = false}) {
+    final color = isBold ? AppColors.espresso : AppColors.ink;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            '${value < 0 ? '-' : ''}${'\u{20B9}'}${value.abs().toStringAsFixed(2)}',
+            style: TextStyle(
+              color: color,
+              fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -594,9 +886,7 @@ class _FakePaymentSheetState extends State<_FakePaymentSheet> {
         children: [
           Text(
             'Fake Payment Gateway',
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
@@ -655,7 +945,9 @@ class _FakePaymentSheetState extends State<_FakePaymentSheet> {
                         strokeWidth: 2,
                       ),
                     )
-                  : Text('${'\u{20B9}'}${widget.amount.toStringAsFixed(2)} Pay'),
+                  : Text(
+                      '${'\u{20B9}'}${widget.amount.toStringAsFixed(2)} Pay',
+                    ),
             ),
           ),
           const SizedBox(height: 8),

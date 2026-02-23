@@ -23,7 +23,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.espresso, AppColors.cocoa, AppColors.caramel],
+                colors: [
+                  AppColors.espresso,
+                  AppColors.cocoa,
+                  AppColors.caramel,
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -90,10 +94,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 trailing: Switch(
                   value: isActive,
                   onChanged: (value) async {
-                    await _firestore
-                        .collection('users')
-                        .doc(doc.id)
-                        .update({'isActive': value});
+                    await _firestore.collection('users').doc(doc.id).update({
+                      'isActive': value,
+                    });
                   },
                   activeThumbColor: AppColors.matcha,
                 ),
@@ -130,6 +133,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             final doc = complaints[index];
             final data = doc.data() as Map<String, dynamic>;
             final status = data['status'] ?? 'open';
+            final priority = (data['priority'] ?? 'medium').toString();
+            final slaDeadline = data['slaDeadline'];
+            final deadline = slaDeadline is Timestamp
+                ? slaDeadline.toDate()
+                : null;
+            final isOverdue =
+                deadline != null &&
+                status.toString().toLowerCase() != 'resolved' &&
+                DateTime.now().isAfter(deadline);
             final createdAt = data['createdAt'];
             final createdLabel = createdAt is Timestamp
                 ? createdAt.toDate().toString()
@@ -145,9 +157,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       children: [
                         Text(
                           data['subject'] ?? 'Complaint',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -162,7 +173,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                           child: Text(
                             status.toString().toUpperCase(),
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
                                   color: status == 'resolved'
                                       ? AppColors.matcha
                                       : AppColors.caramel,
@@ -170,6 +182,56 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 ),
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.oat,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'Priority: ${priority.toUpperCase()}',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: AppColors.espresso,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                        if (deadline != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isOverdue
+                                  ? Colors.red.withOpacityValue(0.15)
+                                  : AppColors.matcha.withOpacityValue(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              isOverdue
+                                  ? 'SLA OVERDUE'
+                                  : 'SLA: ${deadline.toString()}',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: isOverdue
+                                        ? Colors.red
+                                        : AppColors.matcha,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -183,25 +245,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Text(
                       createdLabel,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.ink.withOpacityValue(0.6),
-                          ),
+                        color: AppColors.ink.withOpacityValue(0.6),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Align(
                       alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: status == 'resolved'
-                            ? null
-                            : () async {
-                                await _firestore
-                                    .collection('complaints')
-                                    .doc(doc.id)
-                                    .update({
-                                  'status': 'resolved',
-                                  'resolvedAt': FieldValue.serverTimestamp(),
-                                });
-                              },
-                        child: const Text('Mark Resolved'),
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          TextButton(
+                            onPressed: status == 'open'
+                                ? () async {
+                                    await _firestore
+                                        .collection('complaints')
+                                        .doc(doc.id)
+                                        .update({'status': 'in_progress'});
+                                  }
+                                : null,
+                            child: const Text('Start Work'),
+                          ),
+                          TextButton(
+                            onPressed: status == 'resolved'
+                                ? null
+                                : () async {
+                                    await _firestore
+                                        .collection('complaints')
+                                        .doc(doc.id)
+                                        .update({
+                                          'status': 'resolved',
+                                          'resolvedAt':
+                                              FieldValue.serverTimestamp(),
+                                        });
+                                  },
+                            child: const Text('Mark Resolved'),
+                          ),
+                        ],
                       ),
                     ),
                   ],
