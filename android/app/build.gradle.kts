@@ -25,8 +25,11 @@ android {
     defaultConfig {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 36e272d (Updated project files 2)
+=======
+>>>>>>> df1b95a (New UI and Fixes)
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -37,6 +40,7 @@ android {
 }
 
 >>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
+
 
 
 

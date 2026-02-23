@@ -17,12 +17,14 @@ class OrderItem {
   final String name;
   final double price;
   final int qty;
+  final String notes;
 
   OrderItem({
     required this.itemId,
     required this.name,
     required this.price,
     required this.qty,
+    this.notes = '',
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) => OrderItem(
@@ -30,6 +32,7 @@ class OrderItem {
     name: json['name'],
     price: json['price'].toDouble(),
     qty: json['qty'],
+    notes: json['notes'] ?? '',
   );
 
   Map<String, dynamic> toJson() => {
@@ -37,6 +40,7 @@ class OrderItem {
     'name': name,
     'price': price,
     'qty': qty,
+    'notes': notes,
   };
 }
 

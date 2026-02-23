@@ -1,17 +1,23 @@
 buildscript {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 36e272d (Updated project files 2)
+=======
+>>>>>>> df1b95a (New UI and Fixes)
     repositories {
         google()
         mavenCentral()
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 8ae2a4ecf58c9b20dd7b250d8c409095c181869a
 =======
 >>>>>>> 36e272d (Updated project files 2)
+=======
+>>>>>>> df1b95a (New UI and Fixes)
     dependencies {
         classpath("com.google.gms:google-services:4.4.0")
     }

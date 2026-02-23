@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../core/app_colors.dart';
 
 class OwnerAccountScreen extends StatefulWidget {
   const OwnerAccountScreen({super.key});
@@ -49,6 +50,16 @@ class _OwnerAccountScreenState extends State<OwnerAccountScreen> {
       appBar: AppBar(
         title: const Text('Owner Account'),
         backgroundColor: const Color(0xFF6F4E37),
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.espresso, AppColors.cocoa, AppColors.caramel],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -82,6 +93,14 @@ class _OwnerAccountScreenState extends State<OwnerAccountScreen> {
                       ).pushReplacementNamed('/manage-shop');
                     },
                     child: const Text('Back to Manage Shop'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/complaint-owner');
+                    },
+                    icon: const Icon(Icons.support_agent),
+                    label: const Text('Contact Admin'),
                   ),
                 ],
               ),

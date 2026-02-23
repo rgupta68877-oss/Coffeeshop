@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/order_model.dart';
 import '../auth/login_screen.dart';
+import '../core/app_colors.dart';
 
 class CustomerAccountScreen extends StatefulWidget {
   const CustomerAccountScreen({super.key});
@@ -50,6 +51,16 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
       appBar: AppBar(
         title: const Text('My Account'),
         backgroundColor: const Color(0xFF6F4E37),
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.espresso, AppColors.cocoa, AppColors.caramel],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -113,6 +124,14 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
                           backgroundColor: const Color(0xFFC47A45),
                           foregroundColor: Colors.white,
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/complaint-user');
+                        },
+                        icon: const Icon(Icons.support_agent),
+                        label: const Text('Contact Admin'),
                       ),
                     ],
                   ),
@@ -250,6 +269,20 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
 
     String itemsSummary = items.isNotEmpty
         ? items.map((item) => '${item['name']} x${item['qty']}').join(', ')
+    final paymentMethod = orderData['paymentMethod'] ?? 'Unknown';
+    final paymentStatus = orderData['paymentStatus'] ??
+        (paymentMethod == 'Cash on Delivery' ? 'pending' : 'unknown');
+
+    String itemsSummary = items.isNotEmpty
+        ? items
+            .map((item) {
+              final notes =
+                  (item['notes'] ?? '').toString().trim().isEmpty
+                      ? ''
+                      : ' (${item['notes']})';
+              return '${item['name']} x${item['qty']}$notes';
+            })
+            .join(', ')
         : 'No items';
 
     Color statusColor;
@@ -297,6 +330,18 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
                     fontSize: 16,
                   ),
                 ),
+                Expanded(
+                  child: Text(
+                    'Order #$orderId',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -304,6 +349,7 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
                   ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
+                    color: statusColor.withAlpha((0.1 * 255).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -321,7 +367,39 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen> {
             Text('Time: $time'),
             Text('Items: $itemsSummary'),
             Text('Total: ₹${total.toStringAsFixed(2)}'),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Text('Payment Status: '),
+                _StatusPill(status: paymentStatus.toString()),
+              ],
+            ),
+            Text('Total: ${'\u{20B9}'}${total.toStringAsFixed(2)}'),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _StatusPill({required String status}) {
+    final normalized = status.toLowerCase();
+    final color = normalized == 'paid'
+        ? Colors.green
+        : normalized == 'pending'
+            ? Colors.orange
+            : Colors.grey;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacityValue(0.18),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(
+        normalized.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
       ),
     );

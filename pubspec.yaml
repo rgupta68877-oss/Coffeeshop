@@ -38,6 +38,14 @@ dependencies:
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
   provider: ^6.1.1
+  google_fonts: ^6.2.1
+  flutter_riverpod: ^2.5.1
+  firebase_messaging: ^15.1.0
+  flutter_local_notifications: ^17.1.2
+  drift: ^2.20.0
+  drift_flutter: 0.2.8
+  path_provider: ^2.1.2
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:
@@ -64,9 +72,10 @@ flutter:
     - assets/images/
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/Menu_Items/
+    - assets/Icon.png
+    - assets/SplashScreen.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
