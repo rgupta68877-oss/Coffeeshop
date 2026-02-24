@@ -786,10 +786,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
         name: name,
         price: price.toStringAsFixed(2),
         imagePath: imageUrl,
-        isAvailable: isAvailable,
-        showOwnerControls: true,
-        onEditPrice: () => _showEditPriceDialog(itemId, price.toDouble()),
-        onToggleAvailability: () => _toggleAvailability(itemId, !isAvailable),
+        badgeText: isAvailable ? 'Available' : 'Unavailable',
       ),
     );
   }

@@ -34,6 +34,13 @@ class AppDatabase extends GeneratedDatabase {
         updated_at INTEGER NOT NULL
       )
     ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS app_state (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<void> upsertOrder(String orderId, Map<String, dynamic> payload) async {
@@ -66,6 +73,35 @@ class AppDatabase extends GeneratedDatabase {
     await customUpdate(
       'DELETE FROM cached_orders WHERE order_id = ?',
       variables: [Variable<String>(orderId)],
+    );
+  }
+
+  Future<void> setStateValue(String key, String value) async {
+    await _init();
+    await customUpdate(
+      'INSERT OR REPLACE INTO app_state (key, value, updated_at) VALUES (?, ?, ?)',
+      variables: [
+        Variable<String>(key),
+        Variable<String>(value),
+        Variable<int>(DateTime.now().millisecondsSinceEpoch),
+      ],
+    );
+  }
+
+  Future<String?> getStateValue(String key) async {
+    await _init();
+    final row = await customSelect(
+      'SELECT value FROM app_state WHERE key = ?',
+      variables: [Variable<String>(key)],
+    ).getSingleOrNull();
+    return row?.data['value'] as String?;
+  }
+
+  Future<void> deleteStateValue(String key) async {
+    await _init();
+    await customUpdate(
+      'DELETE FROM app_state WHERE key = ?',
+      variables: [Variable<String>(key)],
     );
   }
 }

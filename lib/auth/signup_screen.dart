@@ -121,97 +121,110 @@ class _SignupScreenState extends State<SignupScreen> {
                   color: AppColors.matcha.withOpacityValue(0.18),
                 ),
               ),
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 10),
-                    Text(
-                      'Create your account',
-                      style: textTheme.displaySmall?.copyWith(
-                        color: AppColors.espresso,
-                        fontWeight: FontWeight.w700,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 48,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Pick your role and start brewing.',
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: AppColors.ink.withOpacityValue(0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(22),
-                        child: Column(
-                          children: [
-                            Image.asset('assets/Icon.png', height: 60),
-                            const SizedBox(height: 20),
-                            _inputField(
-                              'Name',
-                              controller: _nameController,
-                              icon: Icons.person_outline,
-                            ),
-                            const SizedBox(height: 14),
-                            _inputField(
-                              'Phone',
-                              controller: _phoneController,
-                              icon: Icons.phone_outlined,
-                            ),
-                            const SizedBox(height: 14),
-                            _inputField(
-                              'Email',
-                              controller: _emailController,
-                              icon: Icons.email_outlined,
-                            ),
-                            const SizedBox(height: 14),
-                            _inputField(
-                              'Password',
-                              controller: _passwordController,
-                              obscure: true,
-                              icon: Icons.lock_outline,
-                            ),
-                            const SizedBox(height: 14),
-                            _inputField(
-                              'Confirm Password',
-                              controller: _confirmPasswordController,
-                              obscure: true,
-                              icon: Icons.lock_outline,
-                            ),
-                            const SizedBox(height: 18),
-                            _roleSelector(textTheme),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _signup,
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        height: 22,
-                                        width: 22,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Text('Sign Up'),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 460),
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Image.asset('assets/Logo.png', height: 60),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Create your account',
+                                    style: textTheme.headlineMedium?.copyWith(
+                                      color: AppColors.espresso,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Pick your role and start brewing.',
+                                    style: textTheme.bodyLarge?.copyWith(
+                                      color: AppColors.ink.withOpacityValue(
+                                        0.7,
+                                      ),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  _inputField(
+                                    'Name',
+                                    controller: _nameController,
+                                    icon: Icons.person_outline,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _inputField(
+                                    'Phone',
+                                    controller: _phoneController,
+                                    icon: Icons.phone_outlined,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _inputField(
+                                    'Email',
+                                    controller: _emailController,
+                                    icon: Icons.email_outlined,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _inputField(
+                                    'Password',
+                                    controller: _passwordController,
+                                    obscure: true,
+                                    icon: Icons.lock_outline,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _inputField(
+                                    'Confirm Password',
+                                    controller: _confirmPasswordController,
+                                    obscure: true,
+                                    icon: Icons.lock_outline,
+                                  ),
+                                  const SizedBox(height: 18),
+                                  _roleSelector(textTheme),
+                                  const SizedBox(height: 20),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: _isLoading ? null : _signup,
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              height: 22,
+                                              width: 22,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Text('Sign Up'),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text(
+                                      'Already have an account? Log In',
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Already have an account? Log In'),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/app_colors.dart';
 
 class CoffeeCard extends StatelessWidget {
@@ -7,12 +8,12 @@ class CoffeeCard extends StatelessWidget {
   final String imagePath;
   final String? badgeText;
   final VoidCallback? onAddToCart;
-  final VoidCallback? onToggleFavorite;
   final VoidCallback? onEditPrice;
   final VoidCallback? onToggleAvailability;
+  final bool isFavorite;
+  final VoidCallback? onToggleFavorite;
   final bool isAvailable;
   final bool showOwnerControls;
-  final bool isFavorite;
 
   const CoffeeCard({
     super.key,
@@ -21,12 +22,12 @@ class CoffeeCard extends StatelessWidget {
     required this.imagePath,
     this.badgeText,
     this.onAddToCart,
-    this.onToggleFavorite,
     this.onEditPrice,
     this.onToggleAvailability,
+    this.isFavorite = false,
+    this.onToggleFavorite,
     this.isAvailable = true,
     this.showOwnerControls = false,
-    this.isFavorite = false,
   });
 
   @override
@@ -64,26 +65,6 @@ class CoffeeCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (!showOwnerControls)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: IconButton(
-                      onPressed: onToggleFavorite,
-                      tooltip: isFavorite ? 'Remove favorite' : 'Add favorite',
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacityValue(0.9),
-                        foregroundColor: isFavorite
-                            ? AppColors.caramel
-                            : AppColors.espresso,
-                      ),
-                      icon: Icon(
-                        isFavorite
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                      ),
-                    ),
-                  ),
                 Positioned(
                   left: 12,
                   bottom: 12,
@@ -112,6 +93,32 @@ class CoffeeCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (onToggleFavorite != null)
+                  Positioned(
+                    right: 12,
+                    top: 12,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: onToggleFavorite,
+                        child: Ink(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacityValue(0.92),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isFavorite ? Icons.favorite : Icons.favorite_border,
+                            color: isFavorite
+                                ? AppColors.caramel
+                                : AppColors.espresso,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

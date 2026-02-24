@@ -145,7 +145,7 @@ class _LinkYourShopScreenState extends State<LinkYourShopScreen> {
                     padding: const EdgeInsets.all(22),
                     child: Column(
                       children: [
-                        Image.asset('assets/Icon.png', height: 60),
+                        Image.asset('assets/Logo.png', height: 60),
                         const SizedBox(height: 20),
                         _inputField(
                           'Shop Name',

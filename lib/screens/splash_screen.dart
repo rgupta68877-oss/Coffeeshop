@@ -1,8 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/app_colors.dart';
+import '../core/session/session_service.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  bool _checkingSession = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSessionAndRoute();
+  }
+
+  Future<void> _checkSessionAndRoute() async {
+    final destination = await ref.read(startupDestinationProvider.future);
+    if (!mounted) return;
+    if (destination != null) {
+      Navigator.pushReplacementNamed(
+        context,
+        destination.route,
+        arguments: destination.arguments,
+      );
+      return;
+    }
+    setState(() => _checkingSession = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +81,7 @@ class SplashScreen extends StatelessWidget {
                   Row(
                     children: [
                       Image.asset(
-                        'assets/Icon.png',
+                        'assets/Logo.png',
                         height: compact ? 38 : 44,
                         width: compact ? 38 : 44,
                         errorBuilder: (context, error, stackTrace) =>
@@ -60,7 +89,7 @@ class SplashScreen extends StatelessWidget {
                       ),
                       SizedBox(width: compact ? 10 : 12),
                       Text(
-                        'Coffee Shop',
+                        'CoffeeShop',
                         style: textTheme.titleLarge?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -85,13 +114,24 @@ class SplashScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/login');
-                      },
+                      onPressed: _checkingSession
+                          ? null
+                          : () {
+                              Navigator.pushReplacementNamed(context, '/login');
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.caramel,
                       ),
-                      child: const Text('Get Started'),
+                      child: _checkingSession
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Get Started'),
                     ),
                   ),
                 ],

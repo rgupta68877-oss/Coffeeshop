@@ -54,19 +54,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
       try {
         final userRef = _firestore.collection('users').doc(uid);
-        await userRef.set({
-          'uid': uid,
-          'email': userCredential.user!.email,
-          'role': 'Customer',
-          'walletBalance': 0.0,
-          'loyaltyPoints': 0,
-          'favoriteItemIds': const [],
-          'isActive': true,
-          'lastLogin': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
         final userDoc = await userRef.get();
-        if (userDoc.exists) {
+        if (!userDoc.exists) {
+          await userRef.set({
+            'uid': uid,
+            'email': userCredential.user!.email,
+            'role': 'Customer',
+            'walletBalance': 0.0,
+            'loyaltyPoints': 0,
+            'favoriteItemIds': const [],
+            'isActive': true,
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastLogin': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        } else {
+          await userRef.set({
+            'lastLogin': FieldValue.serverTimestamp(),
+            'isActive': true,
+          }, SetOptions(merge: true));
           final roleFromDoc = userDoc.data()?['role'];
           if (roleFromDoc is String && roleFromDoc.isNotEmpty) {
             role = roleFromDoc;
@@ -87,6 +92,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       if (role == 'Owner') {
         Navigator.pushReplacementNamed(context, '/manage-shop');
+      } else if (role == 'Admin') {
+        Navigator.pushReplacementNamed(context, '/admin-dashboard');
       } else {
         Navigator.pushReplacementNamed(context, '/menu');
       }
@@ -147,86 +154,98 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: AppColors.matcha.withOpacityValue(0.18),
                 ),
               ),
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    Text(
-                      'Welcome back',
-                      style: textTheme.displaySmall?.copyWith(
-                        color: AppColors.espresso,
-                        fontWeight: FontWeight.w700,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 48,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sign in to your coffee dashboard.',
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: AppColors.ink.withOpacityValue(0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(22),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset('assets/Icon.png', height: 64),
-                            const SizedBox(height: 24),
-                            _inputField(
-                              'Email',
-                              controller: _emailController,
-                              icon: Icons.email_outlined,
-                            ),
-                            const SizedBox(height: 16),
-                            _inputField(
-                              'Password',
-                              controller: _passwordController,
-                              icon: Icons.lock_outline,
-                              obscure: true,
-                            ),
-                            const SizedBox(height: 6),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: _forgotPassword,
-                                child: const Text('Forgot Password?'),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 460),
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Image.asset('assets/Logo.png', height: 64),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Welcome back',
+                                    style: textTheme.headlineMedium?.copyWith(
+                                      color: AppColors.espresso,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Sign in to your coffee dashboard.',
+                                    style: textTheme.bodyLarge?.copyWith(
+                                      color: AppColors.ink.withOpacityValue(
+                                        0.7,
+                                      ),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 24),
+                                  _inputField(
+                                    'Email',
+                                    controller: _emailController,
+                                    icon: Icons.email_outlined,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _inputField(
+                                    'Password',
+                                    controller: _passwordController,
+                                    icon: Icons.lock_outline,
+                                    obscure: true,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: _forgotPassword,
+                                      child: const Text('Forgot Password?'),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: _isLoading ? null : _login,
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              height: 22,
+                                              width: 22,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Text('Login'),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pushNamed(context, '/signup'),
+                                    child: const Text(
+                                      "Don't have an account? Sign Up",
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _login,
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        height: 22,
-                                        width: 22,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Text('Login'),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: TextButton(
-                        onPressed: () =>
-                            Navigator.pushNamed(context, '/signup'),
-                        child: const Text("Don't have an account? Sign Up"),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),

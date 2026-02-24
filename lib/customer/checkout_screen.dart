@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -46,7 +48,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(_ensureDefaultCoupons());
     _loadProfile();
+  }
+
+  Future<void> _ensureDefaultCoupons() async {
+    await FirebaseFirestore.instance.collection('coupons').doc('FIRST50').set({
+      'code': 'FIRST50',
+      'type': 'percent',
+      'value': 50,
+      'firstOrderOnly': true,
+      'isActive': true,
+      'label': 'FIRST50 - 50% OFF your first order',
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> _loadProfile() async {
@@ -142,13 +158,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return amount < 0 ? 0 : amount;
   }
 
-  void _applyCoupon(double subtotal) {
+  Future<void> _applyCoupon(double subtotal) async {
     final code = _couponController.text.trim().toUpperCase();
     if (code.isEmpty) {
       setState(() {
         _appliedCouponCode = null;
         _discountAmount = 0.0;
       });
+      return;
+    }
+    if (code == 'FIRST50') {
+      await _applyFirst50Coupon(subtotal);
       return;
     }
     final offer = _availableOffers.firstWhere(
@@ -166,7 +186,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         : 0.0;
     if (subtotal < minOrder) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Minimum order for this coupon is ₹$minOrder')),
+        SnackBar(
+          content: Text(
+            'Minimum order for this coupon is ${'\u{20B9}'}$minOrder',
+          ),
+        ),
       );
       return;
     }
@@ -179,6 +203,62 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _appliedCouponCode = code;
       _discountAmount = discount.clamp(0, subtotal).toDouble();
     });
+  }
+
+  Future<void> _applyFirst50Coupon(double subtotal) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final canUse = await _canUseFirst50Coupon(user.uid);
+    if (!canUse) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'FIRST50 is valid only for your first order and can be used once.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final couponDoc = await FirebaseFirestore.instance
+        .collection('coupons')
+        .doc('FIRST50')
+        .get();
+    if (!couponDoc.exists || couponDoc.data()?['isActive'] != true) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Coupon FIRST50 is not active right now')),
+      );
+      return;
+    }
+
+    final discount = (subtotal * 0.5).clamp(0, subtotal).toDouble();
+    setState(() {
+      _appliedCouponCode = 'FIRST50';
+      _discountAmount = discount;
+    });
+  }
+
+  Future<bool> _canUseFirst50Coupon(String uid) async {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final usedCoupons =
+        (userDoc.data()?['usedCouponCodes'] as List?)
+            ?.map((e) => e.toString().toUpperCase())
+            .toList() ??
+        const <String>[];
+    if (usedCoupons.contains('FIRST50')) return false;
+
+    final existingOrder = await FirebaseFirestore.instance
+        .collection('orders')
+        .where('customerId', isEqualTo: uid)
+        .limit(1)
+        .get();
+    return existingOrder.docs.isEmpty;
   }
 
   Future<void> _placeOrder() async {
@@ -220,6 +300,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
+
+      if (_appliedCouponCode == 'FIRST50') {
+        final canUse = await _canUseFirst50Coupon(user.uid);
+        if (!canUse) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('FIRST50 is no longer valid for this account.'),
+            ),
+          );
+          setState(() {
+            _appliedCouponCode = null;
+            _discountAmount = 0.0;
+            _isPlacingOrder = false;
+          });
+          return;
+        }
+      }
 
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -346,6 +444,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'walletBalance': newWallet,
         'loyaltyPoints': newPoints,
+        if (_appliedCouponCode != null)
+          'usedCouponCodes': FieldValue.arrayUnion([_appliedCouponCode]),
       }, SetOptions(merge: true));
 
       cartNotifier.clearCart();
@@ -608,11 +708,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         final label = (offer['label'] ?? code).toString();
                         return ActionChip(
                           label: Text(label),
-                          onPressed: () {
+                          onPressed: () async {
                             setState(() {
                               _couponController.text = code;
                             });
-                            _applyCoupon(subtotal);
+                            await _applyCoupon(subtotal);
                           },
                         );
                       }).toList(),
@@ -632,7 +732,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                       const SizedBox(width: 10),
                       ElevatedButton(
-                        onPressed: () => _applyCoupon(subtotal),
+                        onPressed: () async {
+                          await _applyCoupon(subtotal);
+                        },
                         child: const Text('Apply'),
                       ),
                     ],

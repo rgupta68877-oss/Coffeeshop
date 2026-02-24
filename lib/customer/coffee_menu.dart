@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/coffee_data.dart';
 import '../widgets/coffee_card.dart';
-import 'coffee_detail.dart';
 import '../providers/cart_provider.dart';
 import '../core/app_colors.dart';
 
@@ -187,6 +186,14 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
     return filtered;
   }
 
+  Map<String, dynamic> _coffeeDetailArgs({
+    required Coffee coffee,
+    required String shopId,
+    required String shopName,
+  }) {
+    return {'coffee': coffee.toMap(), 'shopId': shopId, 'shopName': shopName};
+  }
+
   Widget _buildMenuContent({
     required List<Coffee> coffees,
     required String shopId,
@@ -233,15 +240,13 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
                 final coffee = filtered[index];
                 return GestureDetector(
                   onTap: () {
-                    Navigator.push(
+                    Navigator.pushNamed(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => CoffeeDetail(
-                          coffee: coffee,
-                          shopId: shopId,
-                          shopName: shopName,
-                          snackOptions: snackOptions(),
-                        ),
+                      '/coffee-detail',
+                      arguments: _coffeeDetailArgs(
+                        coffee: coffee,
+                        shopId: shopId,
+                        shopName: shopName,
                       ),
                     );
                   },

@@ -7,6 +7,7 @@ import 'screens/splash_screen.dart';
 import 'auth/login_screen.dart';
 import 'auth/signup_screen.dart';
 import 'customer/coffee_menu.dart';
+import 'customer/coffee_detail.dart';
 import 'customer/cart_screen.dart';
 import 'customer/track_order_screen.dart';
 import 'auth/link_your_shop_screen.dart';
@@ -20,11 +21,11 @@ import 'screens/complaint_screen.dart';
 import 'admin/admin_dashboard_screen.dart';
 import 'admin/admin_gate_screen.dart';
 import 'core/notifications/notification_service.dart';
+import 'core/session/session_service.dart';
+import 'widgets/coffee_data.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService.initializeForBackground();
   final title = message.notification?.title ?? 'Order Update';
   final body = message.notification?.body ?? 'Your order status has changed.';
@@ -39,16 +40,17 @@ void main() async {
   runApp(const ProviderScope(child: CoffeeShopApp()));
 }
 
-class CoffeeShopApp extends StatelessWidget {
+class CoffeeShopApp extends ConsumerWidget {
   const CoffeeShopApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       restorationScopeId: 'coffee_shop_app',
       initialRoute: '/',
+      navigatorObservers: [AppRouteObserver(ref)],
       routes: {
         '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
@@ -58,6 +60,22 @@ class CoffeeShopApp extends StatelessWidget {
         '/owner-account': (context) => const OwnerAccountScreen(),
         '/customer-account': (context) => const CustomerAccountScreen(),
         '/menu': (context) => const CoffeeMenu(),
+        '/coffee-detail': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map) {
+            final map = Map<String, dynamic>.from(args);
+            final rawCoffee = map['coffee'];
+            if (rawCoffee is Map) {
+              return CoffeeDetail(
+                coffee: Coffee.fromMap(Map<String, dynamic>.from(rawCoffee)),
+                shopId: (map['shopId'] ?? '').toString(),
+                shopName: (map['shopName'] ?? 'Coffee Shop').toString(),
+                snackOptions: snackOptions(),
+              );
+            }
+          }
+          return const CoffeeMenu();
+        },
         '/cart': (context) => const CartScreen(),
         '/checkout': (context) => const CheckoutScreen(),
         '/order-success': (context) => OrderSuccess(

@@ -12,6 +12,26 @@ class Nutrition {
     required this.fat,
     required this.caffeineMg,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'kcal': kcal,
+      'protein': protein,
+      'carbs': carbs,
+      'fat': fat,
+      'caffeineMg': caffeineMg,
+    };
+  }
+
+  factory Nutrition.fromMap(Map<String, dynamic> map) {
+    return Nutrition(
+      kcal: (map['kcal'] as num?)?.toInt() ?? 0,
+      protein: (map['protein'] as num?)?.toDouble() ?? 0,
+      carbs: (map['carbs'] as num?)?.toDouble() ?? 0,
+      fat: (map['fat'] as num?)?.toDouble() ?? 0,
+      caffeineMg: (map['caffeineMg'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
 class Coffee {
@@ -38,6 +58,40 @@ class Coffee {
     this.isDairyFree = false,
     this.isSnack = false,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'itemId': itemId,
+      'name': name,
+      'price': price,
+      'image': image,
+      'category': category,
+      'description': description,
+      'nutrition': nutrition.toMap(),
+      'badges': badges,
+      'isDairyFree': isDairyFree,
+      'isSnack': isSnack,
+    };
+  }
+
+  factory Coffee.fromMap(Map<String, dynamic> map) {
+    return Coffee(
+      itemId: (map['itemId'] ?? '').toString(),
+      name: (map['name'] ?? '').toString(),
+      price: (map['price'] ?? '0').toString(),
+      image: (map['image'] ?? '').toString(),
+      category: (map['category'] ?? MenuCategory.other).toString(),
+      description: (map['description'] ?? '').toString(),
+      nutrition: Nutrition.fromMap(
+        (map['nutrition'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
+      badges: ((map['badges'] as List?) ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      isDairyFree: map['isDairyFree'] == true,
+      isSnack: map['isSnack'] == true,
+    );
+  }
 }
 
 class MenuCategory {
