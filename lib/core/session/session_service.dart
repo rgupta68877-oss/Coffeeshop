@@ -81,12 +81,45 @@ class SessionService {
 
   Future<String> resolveRole(String uid) async {
     try {
+      final currentUser = _auth.currentUser;
+      if (currentUser != null && currentUser.uid == uid) {
+        final token = await currentUser.getIdTokenResult(true);
+        final claims = token.claims ?? const <String, dynamic>{};
+        final adminClaim = claims['admin'];
+        if (adminClaim == true || adminClaim == 'true') {
+          await _database.setStateValue('role_$uid', 'Admin');
+          return 'Admin';
+        }
+        final claimRole = claims['role']?.toString();
+        if (claimRole != null && claimRole.trim().isNotEmpty) {
+          final normalizedClaim = _normalizeRole(claimRole);
+          await _database.setStateValue('role_$uid', normalizedClaim);
+          return normalizedClaim;
+        }
+      }
+    } catch (_) {}
+
+    try {
       final doc = await _firestore.collection('users').doc(uid).get();
       final rawRole = doc.data()?['role']?.toString();
       if (rawRole != null && rawRole.trim().isNotEmpty) {
         final normalized = _normalizeRole(rawRole);
         await _database.setStateValue('role_$uid', normalized);
         return normalized;
+      }
+      final rawShopId = doc.data()?['shopId']?.toString();
+      if (rawShopId != null && rawShopId.trim().isNotEmpty) {
+        await _database.setStateValue('role_$uid', 'Owner');
+        return 'Owner';
+      }
+      final ownedShop = await _firestore
+          .collection('shops')
+          .where('ownerId', isEqualTo: uid)
+          .limit(1)
+          .get();
+      if (ownedShop.docs.isNotEmpty) {
+        await _database.setStateValue('role_$uid', 'Owner');
+        return 'Owner';
       }
     } catch (_) {}
 
@@ -129,7 +162,7 @@ class SessionService {
       case 'Owner':
         return '/manage-shop';
       case 'Admin':
-        return '/admin-dashboard';
+        return '/admin';
       case 'Customer':
       default:
         return '/menu';

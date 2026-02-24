@@ -46,6 +46,16 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
+  Future<String?> _inferOwnerShopId(String uid) async {
+    final ownedShop = await _firestore
+        .collection('shops')
+        .where('ownerId', isEqualTo: uid)
+        .limit(1)
+        .get();
+    if (ownedShop.docs.isEmpty) return null;
+    return ownedShop.docs.first.id;
+  }
+
   Future<void> _forgotPassword() async {
     if (_emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -80,8 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
       final user = userCredential.user!;
       final uid = user.uid;
       var role = 'Customer';
-
+      String? shopId;
       final claimRole = await _roleFromClaims(user);
+      final hasClaimRole = claimRole != null;
+
       if (claimRole != null) {
         role = claimRole;
       }
@@ -90,10 +102,17 @@ class _LoginScreenState extends State<LoginScreen> {
         final userRef = _firestore.collection('users').doc(uid);
         final userDoc = await userRef.get();
         if (!userDoc.exists) {
+          if (role != 'Admin') {
+            shopId = await _inferOwnerShopId(uid);
+            if (shopId != null && shopId.isNotEmpty) {
+              role = 'Owner';
+            }
+          }
           await userRef.set({
             'uid': uid,
             'email': user.email,
             'role': role,
+            'shopId': role == 'Owner' ? shopId : null,
             'walletBalance': 0.0,
             'loyaltyPoints': 0,
             'favoriteItemIds': const [],
@@ -106,9 +125,28 @@ class _LoginScreenState extends State<LoginScreen> {
             'lastLogin': FieldValue.serverTimestamp(),
             'isActive': true,
           }, SetOptions(merge: true));
-          final rawRole = userDoc.data()?['role'];
-          if (rawRole != null && rawRole.toString().trim().isNotEmpty) {
-            role = _normalizeRole(rawRole);
+          if (!hasClaimRole) {
+            final rawRole = userDoc.data()?['role'];
+            if (rawRole != null && rawRole.toString().trim().isNotEmpty) {
+              role = _normalizeRole(rawRole);
+            }
+          }
+          final rawShopId = userDoc.data()?['shopId'];
+          if (rawShopId is String && rawShopId.trim().isNotEmpty) {
+            shopId = rawShopId.trim();
+            if (role == 'Customer') {
+              role = 'Owner';
+            }
+          }
+          if (role == 'Customer') {
+            shopId = await _inferOwnerShopId(uid);
+            if (shopId != null && shopId.isNotEmpty) {
+              role = 'Owner';
+              await userRef.set({
+                'role': 'Owner',
+                'shopId': shopId,
+              }, SetOptions(merge: true));
+            }
           }
         }
       } on FirebaseException catch (e) {
@@ -116,6 +154,14 @@ class _LoginScreenState extends State<LoginScreen> {
           final roleFromClaims = await _roleFromClaims(user);
           if (roleFromClaims != null) {
             role = roleFromClaims;
+          }
+          if (role == 'Customer') {
+            try {
+              shopId = await _inferOwnerShopId(uid);
+              if (shopId != null && shopId.isNotEmpty) {
+                role = 'Owner';
+              }
+            } catch (_) {}
           }
         } else {
           rethrow;
@@ -126,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (role == 'Owner') {
         Navigator.pushReplacementNamed(context, '/manage-shop');
       } else if (role == 'Admin') {
-        Navigator.pushReplacementNamed(context, '/admin-dashboard');
+        Navigator.pushReplacementNamed(context, '/admin');
       } else {
         Navigator.pushReplacementNamed(context, '/menu');
       }

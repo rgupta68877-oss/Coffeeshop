@@ -14,6 +14,57 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isAuthorized = false;
+  bool _isCheckingAccess = true;
+
+  bool _isAdminRole(dynamic roleValue) {
+    final role = (roleValue ?? '').toString().trim().toLowerCase();
+    return role == 'admin';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAccess();
+  }
+
+  Future<void> _checkAccess() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      return;
+    }
+
+    var isAdmin = false;
+    try {
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      isAdmin = _isAdminRole(doc.data()?['role']);
+    } on FirebaseException catch (e) {
+      if (e.code != 'permission-denied') rethrow;
+    }
+
+    if (!isAdmin) {
+      final token = await user.getIdTokenResult(true);
+      final claims = token.claims ?? const <String, dynamic>{};
+      final adminClaim = claims['admin'];
+      isAdmin =
+          adminClaim == true ||
+          adminClaim == 'true' ||
+          _isAdminRole(claims['role']);
+    }
+
+    if (!mounted) return;
+    if (!isAdmin) {
+      Navigator.pushReplacementNamed(context, '/admin');
+      return;
+    }
+
+    setState(() {
+      _isAuthorized = true;
+      _isCheckingAccess = false;
+    });
+  }
 
   Future<void> _logout() async {
     await _auth.signOut();
@@ -23,6 +74,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isCheckingAccess) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (!_isAuthorized) {
+      return const Scaffold(body: SizedBox.shrink());
+    }
     return DefaultTabController(
       length: 3,
       child: Scaffold(
