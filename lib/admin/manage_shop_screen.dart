@@ -89,6 +89,9 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
   String? _shopId;
   String? _shopName;
   bool _isOnline = false;
+  bool _isLoadingShop = true;
+  bool _needsShopLink = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -97,28 +100,76 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
   }
 
   Future<void> _loadShopData() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        if (!mounted) return;
+        setState(() {
+          _loadError = 'Please log in again to access your shop.';
+        });
+        return;
+      }
 
-    final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    if (!userDoc.exists) return;
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) {
+        if (!mounted) return;
+        setState(() {
+          _loadError = 'Owner profile not found.';
+        });
+        return;
+      }
 
-    final shopId = userDoc.data()?['shopId'] as String?;
-    if (shopId == null || shopId.isEmpty) return;
+      String? shopId = (userDoc.data()?['shopId'] as String?)?.trim();
 
-    if (!mounted) return;
-    setState(() {
-      _shopId = shopId;
-    });
+      if (shopId == null || shopId.isEmpty) {
+        final ownedShop = await _firestore
+            .collection('shops')
+            .where('ownerId', isEqualTo: user.uid)
+            .limit(1)
+            .get();
+        if (ownedShop.docs.isNotEmpty) {
+          shopId = ownedShop.docs.first.id;
+          await _firestore.collection('users').doc(user.uid).set({
+            'shopId': shopId,
+          }, SetOptions(merge: true));
+        }
+      }
 
-    final shopDoc = await _firestore.collection('shops').doc(shopId).get();
-    if (!shopDoc.exists) return;
+      if (shopId == null || shopId.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _needsShopLink = true;
+        });
+        return;
+      }
 
-    if (!mounted) return;
-    setState(() {
-      _shopName = shopDoc.data()?['name'] as String? ?? 'Shop';
-      _isOnline = shopDoc.data()?['status'] == 'online';
-    });
+      final shopDoc = await _firestore.collection('shops').doc(shopId).get();
+      if (!shopDoc.exists) {
+        if (!mounted) return;
+        setState(() {
+          _needsShopLink = true;
+        });
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _shopId = shopId;
+        _shopName = shopDoc.data()?['name'] as String? ?? 'Shop';
+        _isOnline = shopDoc.data()?['status'] == 'online';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = 'Could not load shop details.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingShop = false;
+        });
+      }
+    }
   }
 
   Future<void> _toggleStatus() async {
@@ -271,8 +322,12 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
             ],
           ),
         ),
-        body: _shopId == null
+        body: _isLoadingShop
             ? const Center(child: CircularProgressIndicator())
+            : _loadError != null
+            ? _buildLoadErrorState()
+            : _needsShopLink
+            ? _buildLinkShopState()
             : Column(
                 children: [
                   Container(
@@ -480,6 +535,77 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                   ),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _buildLoadErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 36),
+            const SizedBox(height: 10),
+            Text(
+              _loadError ?? 'Unable to open manage shop.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton(
+              onPressed: () {
+                setState(() {
+                  _isLoadingShop = true;
+                  _needsShopLink = false;
+                  _loadError = null;
+                });
+                _loadShopData();
+              },
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLinkShopState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.storefront_outlined, size: 40),
+                const SizedBox(height: 10),
+                Text(
+                  'No shop is linked to this owner account yet.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Create or link your shop to access Manage Shop.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () =>
+                        Navigator.of(context).pushNamed('/link-shop'),
+                    child: const Text('Link Your Shop'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
