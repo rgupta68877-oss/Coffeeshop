@@ -18,6 +18,34 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isLoading = false;
 
+  String _normalizeRole(dynamic roleValue) {
+    final role = (roleValue ?? '').toString().trim().toLowerCase();
+    switch (role) {
+      case 'admin':
+        return 'Admin';
+      case 'owner':
+      case 'shop_owner':
+      case 'shop owner':
+        return 'Owner';
+      case 'customer':
+      default:
+        return 'Customer';
+    }
+  }
+
+  Future<String?> _roleFromClaims(User user) async {
+    final token = await user.getIdTokenResult(true);
+    final claims = token.claims ?? const <String, dynamic>{};
+    final adminClaim = claims['admin'];
+    if (adminClaim == true || adminClaim == 'true') {
+      return 'Admin';
+    }
+    if (claims.containsKey('role')) {
+      return _normalizeRole(claims['role']);
+    }
+    return null;
+  }
+
   Future<void> _forgotPassword() async {
     if (_emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -49,8 +77,14 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      final uid = userCredential.user!.uid;
+      final user = userCredential.user!;
+      final uid = user.uid;
       var role = 'Customer';
+
+      final claimRole = await _roleFromClaims(user);
+      if (claimRole != null) {
+        role = claimRole;
+      }
 
       try {
         final userRef = _firestore.collection('users').doc(uid);
@@ -58,8 +92,8 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!userDoc.exists) {
           await userRef.set({
             'uid': uid,
-            'email': userCredential.user!.email,
-            'role': 'Customer',
+            'email': user.email,
+            'role': role,
             'walletBalance': 0.0,
             'loyaltyPoints': 0,
             'favoriteItemIds': const [],
@@ -72,21 +106,20 @@ class _LoginScreenState extends State<LoginScreen> {
             'lastLogin': FieldValue.serverTimestamp(),
             'isActive': true,
           }, SetOptions(merge: true));
-          final roleFromDoc = userDoc.data()?['role'];
-          if (roleFromDoc is String && roleFromDoc.isNotEmpty) {
-            role = roleFromDoc;
+          final rawRole = userDoc.data()?['role'];
+          if (rawRole != null && rawRole.toString().trim().isNotEmpty) {
+            role = _normalizeRole(rawRole);
           }
         }
       } on FirebaseException catch (e) {
-        if (e.code != 'permission-denied') rethrow;
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Logged in, but Firestore access is blocked by security rules.',
-            ),
-          ),
-        );
+        if (e.code == 'permission-denied') {
+          final roleFromClaims = await _roleFromClaims(user);
+          if (roleFromClaims != null) {
+            role = roleFromClaims;
+          }
+        } else {
+          rethrow;
+        }
       }
 
       if (!mounted) return;

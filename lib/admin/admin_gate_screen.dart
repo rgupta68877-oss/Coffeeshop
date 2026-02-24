@@ -14,6 +14,11 @@ class _AdminGateScreenState extends State<AdminGateScreen> {
   bool _isChecking = true;
   String? _error;
 
+  bool _isAdminRole(dynamic roleValue) {
+    final role = (roleValue ?? '').toString().trim().toLowerCase();
+    return role == 'admin';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -29,13 +34,31 @@ class _AdminGateScreenState extends State<AdminGateScreen> {
       });
       return;
     }
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-    final role = doc.data()?['role'] ?? '';
+    var isAdmin = false;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      isAdmin = _isAdminRole(doc.data()?['role']);
+    } on FirebaseException catch (e) {
+      if (e.code != 'permission-denied') {
+        rethrow;
+      }
+    }
+
+    if (!isAdmin) {
+      final token = await user.getIdTokenResult(true);
+      final claims = token.claims ?? const <String, dynamic>{};
+      final adminClaim = claims['admin'];
+      isAdmin =
+          adminClaim == true ||
+          adminClaim == 'true' ||
+          _isAdminRole(claims['role']);
+    }
+
     if (!mounted) return;
-    if (role == 'Admin') {
+    if (isAdmin) {
       Navigator.pushReplacementNamed(context, '/admin-dashboard');
     } else {
       setState(() {

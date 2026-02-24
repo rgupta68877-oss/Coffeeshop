@@ -42,6 +42,21 @@ class SessionService {
     '/link-shop',
   };
 
+  String _normalizeRole(String? roleValue) {
+    final role = (roleValue ?? '').trim().toLowerCase();
+    switch (role) {
+      case 'admin':
+        return 'Admin';
+      case 'owner':
+      case 'shop_owner':
+      case 'shop owner':
+        return 'Owner';
+      case 'customer':
+      default:
+        return 'Customer';
+    }
+  }
+
   Future<void> cacheCurrentRoute({
     required String routeName,
     Object? arguments,
@@ -67,14 +82,15 @@ class SessionService {
   Future<String> resolveRole(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
-      final role = (doc.data()?['role'] as String?)?.trim();
-      if (role != null && role.isNotEmpty) {
-        await _database.setStateValue('role_$uid', role);
-        return role;
+      final rawRole = doc.data()?['role']?.toString();
+      if (rawRole != null && rawRole.trim().isNotEmpty) {
+        final normalized = _normalizeRole(rawRole);
+        await _database.setStateValue('role_$uid', normalized);
+        return normalized;
       }
     } catch (_) {}
 
-    return (await _database.getStateValue('role_$uid')) ?? 'Customer';
+    return _normalizeRole(await _database.getStateValue('role_$uid'));
   }
 
   Future<StartupDestination?> resolveStartupDestination() async {
@@ -109,7 +125,7 @@ class SessionService {
   }
 
   String _homeRouteForRole(String role) {
-    switch (role) {
+    switch (_normalizeRole(role)) {
       case 'Owner':
         return '/manage-shop';
       case 'Admin':
@@ -121,7 +137,7 @@ class SessionService {
   }
 
   bool _isRouteAllowedForRole(String route, String role) {
-    switch (role) {
+    switch (_normalizeRole(role)) {
       case 'Owner':
         return {'/manage-shop', '/owner-account', '/link-shop'}.contains(route);
       case 'Admin':
