@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import '../core/app_colors.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -11,6 +13,13 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> _logout() async {
+    await _auth.signOut();
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,8 +27,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
+          systemOverlayStyle: SystemUiOverlayStyle.light,
           title: const Text('Admin Dashboard'),
           foregroundColor: Colors.white,
+          iconTheme: const IconThemeData(color: Colors.white),
+          actionsIconTheme: const IconThemeData(color: Colors.white),
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -33,6 +45,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ),
           ),
+          actions: [
+            IconButton(
+              onPressed: _logout,
+              icon: const Icon(Icons.logout),
+              tooltip: 'Logout',
+            ),
+          ],
           bottom: const TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
@@ -44,11 +63,115 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            _buildUserList(role: 'Customer'),
-            _buildUserList(role: 'Owner'),
-            _buildComplaints(),
+            _buildSummaryCards(),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildUserList(role: 'Customer'),
+                  _buildUserList(role: 'Owner'),
+                  _buildComplaints(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCards() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: StreamBuilder<QuerySnapshot>(
+        stream: _firestore.collection('users').snapshots(),
+        builder: (context, usersSnapshot) {
+          return StreamBuilder<QuerySnapshot>(
+            stream: _firestore.collection('complaints').snapshots(),
+            builder: (context, complaintsSnapshot) {
+              final users = usersSnapshot.data?.docs ?? const [];
+              final complaints = complaintsSnapshot.data?.docs ?? const [];
+              final customerCount = users.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final role = (data['role'] ?? '').toString();
+                return role == 'Customer';
+              }).length;
+              final ownerCount = users.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final role = (data['role'] ?? '').toString();
+                return role == 'Owner';
+              }).length;
+              final openComplaints = complaints.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final status = (data['status'] ?? '').toString().toLowerCase();
+                return status != 'resolved';
+              }).length;
+
+              return Row(
+                children: [
+                  _metricCard(
+                    icon: Icons.groups_outlined,
+                    label: 'Customers',
+                    value: customerCount.toString(),
+                  ),
+                  const SizedBox(width: 10),
+                  _metricCard(
+                    icon: Icons.storefront_outlined,
+                    label: 'Owners',
+                    value: ownerCount.toString(),
+                  ),
+                  const SizedBox(width: 10),
+                  _metricCard(
+                    icon: Icons.report_problem_outlined,
+                    label: 'Open Cases',
+                    value: openComplaints.toString(),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _metricCard({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacityValue(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: AppColors.espresso, size: 18),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.ink.withOpacityValue(0.6),
+              ),
+            ),
           ],
         ),
       ),

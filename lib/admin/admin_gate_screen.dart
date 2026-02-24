@@ -48,9 +48,7 @@ class _AdminGateScreenState extends State<AdminGateScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isChecking) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -73,11 +71,7 @@ class _AdminGateScreenState extends State<AdminGateScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.lock_outline,
-                size: 48,
-                color: AppColors.espresso,
-              ),
+              Icon(Icons.lock_outline, size: 48, color: AppColors.espresso),
               const SizedBox(height: 16),
               Text(
                 _error ?? 'Access denied',
@@ -86,8 +80,10 @@ class _AdminGateScreenState extends State<AdminGateScreen> {
               ),
               const SizedBox(height: 16),
               OutlinedButton(
-                onPressed: () => Navigator.pushReplacementNamed(context, '/'),
-                child: const Text('Back to Login'),
+                onPressed: () => Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/', (route) => false),
+                child: const Text('Back to Splash'),
               ),
             ],
           ),

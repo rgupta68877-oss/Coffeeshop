@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,6 +55,7 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final userRef = _firestore.collection('users').doc(user.uid);
+    final favoriteRef = userRef.collection('favorites').doc(coffee.itemId);
     final isFavorite = _favoriteItemIds.contains(coffee.itemId);
     setState(() {
       if (isFavorite) {
@@ -62,17 +64,79 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
         _favoriteItemIds.add(coffee.itemId);
       }
     });
-    await userRef.set({
-      'favoriteItemIds': isFavorite
-          ? FieldValue.arrayRemove([coffee.itemId])
-          : FieldValue.arrayUnion([coffee.itemId]),
-    }, SetOptions(merge: true));
+    try {
+      await userRef.set({
+        'favoriteItemIds': isFavorite
+            ? FieldValue.arrayRemove([coffee.itemId])
+            : FieldValue.arrayUnion([coffee.itemId]),
+      }, SetOptions(merge: true));
+
+      if (isFavorite) {
+        await favoriteRef.delete();
+      } else {
+        await favoriteRef.set({
+          'itemId': coffee.itemId,
+          'coffee': coffee.toMap(),
+          'shopId': _selectedShopId ?? '',
+          'shopName': _selectedShopName ?? 'CoffeeShop',
+          'likedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      final shopId = (_selectedShopId ?? '').trim();
+      if (shopId.isNotEmpty) {
+        await _updateLikeStatsForShop(
+          shopId: shopId,
+          coffee: coffee,
+          increment: !isFavorite,
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        if (isFavorite) {
+          _favoriteItemIds.add(coffee.itemId);
+        } else {
+          _favoriteItemIds.remove(coffee.itemId);
+        }
+      });
+    }
+  }
+
+  Future<void> _updateLikeStatsForShop({
+    required String shopId,
+    required Coffee coffee,
+    required bool increment,
+  }) async {
+    final statsRef = _firestore
+        .collection('shops')
+        .doc(shopId)
+        .collection('item_stats')
+        .doc(coffee.itemId);
+
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(statsRef);
+      final currentData = snapshot.data();
+      final currentLikes = ((currentData?['totalLikes'] ?? 0) as num).toInt();
+      final nextLikes = increment
+          ? currentLikes + 1
+          : (currentLikes > 0 ? currentLikes - 1 : 0);
+
+      transaction.set(statsRef, {
+        'itemId': coffee.itemId,
+        'itemName': coffee.name,
+        'imageUrl': coffee.image,
+        'category': coffee.category,
+        'totalLikes': nextLikes,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    });
   }
 
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/');
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
     }
   }
 
@@ -282,6 +346,9 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -297,6 +364,10 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
               style: textTheme.bodySmall?.copyWith(color: Colors.white70),
             ),
           ],
+        ),
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
         ),
         foregroundColor: Colors.white,
         flexibleSpace: Container(
@@ -565,31 +636,36 @@ class _CoffeeMenuState extends ConsumerState<CoffeeMenu> {
   }
 
   Widget _buildFilterChips() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        FilterChip(
-          label: const Text('Under Rs 150'),
-          selected: _filterUnder150,
-          onSelected: (value) => setState(() => _filterUnder150 = value),
-        ),
-        FilterChip(
-          label: const Text('Dairy-Free'),
-          selected: _filterDairyFree,
-          onSelected: (value) => setState(() => _filterDairyFree = value),
-        ),
-        FilterChip(
-          label: const Text('Caffeine Boost'),
-          selected: _filterCaffeineBoost,
-          onSelected: (value) => setState(() => _filterCaffeineBoost = value),
-        ),
-        FilterChip(
-          label: const Text('Snacks'),
-          selected: _filterSnacks,
-          onSelected: (value) => setState(() => _filterSnacks = value),
-        ),
-      ],
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          FilterChip(
+            label: const Text('Under Rs 150'),
+            selected: _filterUnder150,
+            onSelected: (value) => setState(() => _filterUnder150 = value),
+          ),
+          const SizedBox(width: 10),
+          FilterChip(
+            label: const Text('Dairy-Free'),
+            selected: _filterDairyFree,
+            onSelected: (value) => setState(() => _filterDairyFree = value),
+          ),
+          const SizedBox(width: 10),
+          FilterChip(
+            label: const Text('Caffeine Boost'),
+            selected: _filterCaffeineBoost,
+            onSelected: (value) => setState(() => _filterCaffeineBoost = value),
+          ),
+          const SizedBox(width: 10),
+          FilterChip(
+            label: const Text('Snacks'),
+            selected: _filterSnacks,
+            onSelected: (value) => setState(() => _filterSnacks = value),
+          ),
+        ],
+      ),
     );
   }
 

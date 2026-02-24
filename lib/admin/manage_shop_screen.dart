@@ -177,7 +177,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
     }
     await _auth.signOut();
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/');
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 
   Future<void> _initializeMenuItems() async {
@@ -231,8 +231,11 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
+          systemOverlayStyle: SystemUiOverlayStyle.light,
           title: const Text('Manage Shop'),
           foregroundColor: Colors.white,
+          iconTheme: const IconThemeData(color: Colors.white),
+          actionsIconTheme: const IconThemeData(color: Colors.white),
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -368,6 +371,7 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
                       );
                     },
                   ),
+                  _buildItemInsightsSection(),
                   Expanded(
                     child: TabBarView(
                       children: [
@@ -551,6 +555,137 @@ class _ManageShopScreenState extends State<ManageShopScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildItemInsightsSection() {
+    if (_shopId == null) return const SizedBox.shrink();
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore
+          .collection('shops')
+          .doc(_shopId)
+          .collection('item_stats')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final stats = snapshot.data!.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+        stats.sort((a, b) {
+          final aOrdered = _numValue(a['totalOrderedQty']);
+          final bOrdered = _numValue(b['totalOrderedQty']);
+          return bOrdered.compareTo(aOrdered);
+        });
+        final topOrdered = stats.take(3).toList();
+        final liked = [...stats];
+        liked.sort((a, b) {
+          final aLikes = _numValue(a['totalLikes']);
+          final bLikes = _numValue(b['totalLikes']);
+          return bLikes.compareTo(aLikes);
+        });
+        final topLiked = liked.take(3).toList();
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+          child: Row(
+            children: [
+              _insightCard(
+                title: 'Most Ordered',
+                icon: Icons.local_fire_department_outlined,
+                data: topOrdered,
+                metricField: 'totalOrderedQty',
+                metricLabel: 'orders',
+              ),
+              const SizedBox(width: 10),
+              _insightCard(
+                title: 'Most Liked',
+                icon: Icons.favorite_outline_rounded,
+                data: topLiked,
+                metricField: 'totalLikes',
+                metricLabel: 'likes',
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _insightCard({
+    required String title,
+    required IconData icon,
+    required List<Map<String, dynamic>> data,
+    required String metricField,
+    required String metricLabel,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacityValue(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: AppColors.espresso),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...data.map((item) {
+              final name = (item['itemName'] ?? item['name'] ?? 'Item')
+                  .toString();
+              final metric = _numValue(item[metricField]).toInt();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$metric $metricLabel',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.ink.withOpacityValue(0.65),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _numValue(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0;
+    return 0;
   }
 
   Widget _buildActionButton(

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/cart_provider.dart';
 import '../models/order_model.dart';
 import '../core/app_colors.dart';
+import '../widgets/coffee_data.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -435,6 +436,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      if (shopId != null && shopId.toString().isNotEmpty) {
+        await _updateShopOrderStats(
+          shopId: shopId.toString(),
+          orderItems: orderItems,
+        );
+      }
+
       final newWallet = (_walletBalance - walletUsed).clamp(0, double.infinity);
       final newPoints =
           (_loyaltyPoints - loyaltyRedeemed.toInt() + loyaltyEarned).clamp(
@@ -487,6 +495,47 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return true;
     }
     return false;
+  }
+
+  Future<void> _updateShopOrderStats({
+    required String shopId,
+    required List<OrderItem> orderItems,
+  }) async {
+    final batch = FirebaseFirestore.instance.batch();
+    final shopRef = FirebaseFirestore.instance.collection('shops').doc(shopId);
+
+    for (final item in orderItems) {
+      final statsRef = shopRef.collection('item_stats').doc(item.itemId);
+      final resolvedCoffee = _resolveCoffee(item);
+
+      batch.set(statsRef, {
+        'itemId': item.itemId,
+        'itemName': item.name,
+        'imageUrl': resolvedCoffee?.image ?? '',
+        'category': resolvedCoffee?.category ?? MenuCategory.other,
+        'totalOrders': FieldValue.increment(1),
+        'totalOrderedQty': FieldValue.increment(item.qty),
+        'lastOrderedAt': FieldValue.serverTimestamp(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+
+    await batch.commit();
+  }
+
+  Coffee? _resolveCoffee(OrderItem item) {
+    for (final coffee in coffeeList) {
+      if (coffee.itemId == item.itemId) {
+        return coffee;
+      }
+    }
+    final targetName = item.name.toLowerCase();
+    for (final coffee in coffeeList) {
+      if (coffee.name.toLowerCase() == targetName) {
+        return coffee;
+      }
+    }
+    return null;
   }
 
   @override

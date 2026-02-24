@@ -57,7 +57,7 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen> {
   Future<void> _logout() async {
     await _auth.signOut();
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/');
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 
   Future<void> _reorder(Map<String, dynamic> orderData) async {
@@ -233,6 +233,47 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen> {
     );
   }
 
+  Future<void> _removeFavorite({
+    required String uid,
+    required String itemId,
+  }) async {
+    await _firestore.collection('users').doc(uid).set({
+      'favoriteItemIds': FieldValue.arrayRemove([itemId]),
+    }, SetOptions(merge: true));
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('favorites')
+        .doc(itemId)
+        .delete();
+  }
+
+  Coffee? _favoriteCoffeeFromDoc(Map<String, dynamic> data, String docId) {
+    final rawCoffee = data['coffee'];
+    if (rawCoffee is Map) {
+      return Coffee.fromMap(Map<String, dynamic>.from(rawCoffee));
+    }
+    for (final item in coffeeList) {
+      if (item.itemId == docId) return item;
+    }
+    return null;
+  }
+
+  void _addFavoriteToCart(Coffee coffee) {
+    ref.read(cartProvider.notifier).addItem(coffee);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('${coffee.name} added to cart'),
+          action: SnackBarAction(
+            label: 'View Cart',
+            onPressed: () => Navigator.pushNamed(context, '/cart'),
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = _auth.currentUser;
@@ -274,6 +315,16 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen> {
                       textTheme: textTheme,
                       compact: compact,
                       sectionGap: sectionGap,
+                    ),
+                  ),
+                  SizedBox(height: sectionGap),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                    ),
+                    child: _buildFavoritesSection(
+                      uid: user.uid,
+                      compact: compact,
                     ),
                   ),
                   SizedBox(height: sectionGap),
@@ -509,6 +560,207 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFavoritesSection({required String uid, required bool compact}) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(compact ? 12 : 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeader(
+              icon: Icons.favorite_outline_rounded,
+              title: 'Favourites',
+              subtitle: 'Your liked coffees',
+            ),
+            const SizedBox(height: 10),
+            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _firestore
+                  .collection('users')
+                  .doc(uid)
+                  .collection('favorites')
+                  .orderBy('likedAt', descending: true)
+                  .limit(20)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Text(
+                    'Could not load favourites.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  );
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: LinearProgressIndicator(minHeight: 2),
+                  );
+                }
+
+                final docs = snapshot.data?.docs ?? [];
+                final legacyIds =
+                    ((_userData?['favoriteItemIds'] as List?) ?? const [])
+                        .map((e) => e.toString())
+                        .toList();
+                final hasLegacyOnly = docs.isEmpty && legacyIds.isNotEmpty;
+                if (docs.isEmpty && !hasLegacyOnly) {
+                  return Text(
+                    'No favourites yet. Tap the heart icon in menu items to save.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.ink.withOpacityValue(0.65),
+                    ),
+                  );
+                }
+                final visibleCount = hasLegacyOnly
+                    ? legacyIds.length
+                    : docs.length;
+
+                return SizedBox(
+                  height: 146,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: visibleCount,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(width: 10),
+                    itemBuilder: (context, index) {
+                      final String favoriteId;
+                      Map<String, dynamic> data;
+                      if (hasLegacyOnly) {
+                        favoriteId = legacyIds[index];
+                        data = const {};
+                      } else {
+                        final doc = docs[index];
+                        favoriteId = doc.id;
+                        data = doc.data();
+                      }
+                      final coffee = _favoriteCoffeeFromDoc(data, favoriteId);
+                      if (coffee == null) {
+                        return const SizedBox.shrink();
+                      }
+                      final shopId = (data['shopId'] ?? '').toString();
+                      final shopName = (data['shopName'] ?? 'CoffeeShop')
+                          .toString();
+                      return Container(
+                        width: compact ? 210 : 230,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.oat,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: _favoriteImage(coffee.image),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    coffee.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${'\u{20B9}'}${coffee.price}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
+                                        ?.copyWith(
+                                          color: AppColors.espresso,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                  const Spacer(),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextButton(
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/coffee-detail',
+                                              arguments: {
+                                                'coffee': coffee.toMap(),
+                                                'shopId': shopId,
+                                                'shopName': shopName,
+                                              },
+                                            );
+                                          },
+                                          child: const Text('Open'),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        onPressed: () =>
+                                            _addFavoriteToCart(coffee),
+                                        icon: const Icon(
+                                          Icons.add_shopping_cart_outlined,
+                                        ),
+                                        tooltip: 'Add to cart',
+                                      ),
+                                      IconButton(
+                                        onPressed: () => _removeFavorite(
+                                          uid: uid,
+                                          itemId: favoriteId,
+                                        ),
+                                        icon: const Icon(
+                                          Icons.favorite_rounded,
+                                          color: AppColors.caramel,
+                                        ),
+                                        tooltip: 'Remove favorite',
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _favoriteImage(String imagePath) {
+    if (imagePath.startsWith('http')) {
+      return Image.network(
+        imagePath,
+        width: 72,
+        height: 110,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _favoriteImageFallback(),
+      );
+    }
+    return Image.asset(
+      imagePath,
+      width: 72,
+      height: 110,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _favoriteImageFallback(),
+    );
+  }
+
+  Widget _favoriteImageFallback() {
+    return Container(
+      width: 72,
+      height: 110,
+      color: AppColors.surface,
+      child: const Icon(Icons.local_cafe_outlined, color: AppColors.espresso),
     );
   }
 
